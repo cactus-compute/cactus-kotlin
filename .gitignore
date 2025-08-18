@@ -11,3 +11,8 @@ xcuserdata
 .kotlin
 #So we don't accidentally commit our private keys
 *.gpg
+library/libs/ios/cactus.xcframework
+library/libs/android/jniLibs
+example/iosApp/iosApp
+library/src/commonMain/resources/ios/cactus.xcframework
+library/src/commonMain/resources/android/jniLibs
