@@ -5,7 +5,7 @@ plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinSerialization)
-    id("co.touchlab.kmmbridge") version "1.0.1"
+    id("co.touchlab.kmmbridge") version "1.2.1"
     `maven-publish`
 }
 
@@ -64,12 +64,9 @@ kotlin {
         }
         val androidMain by getting {
             dependencies {
-                // Use the AAR artifact so that JNA's native .so files are bundled in the APK
                 implementation("net.java.dev.jna:jna:5.13.0@aar")
                 implementation("androidx.core:core-ktx:1.12.0")
                 implementation("androidx.activity:activity-compose:1.8.2")
-                // VOSK offline speech recognition
-                implementation("com.alphacephei:vosk-android:0.3.47@aar")
             }
         }
     }

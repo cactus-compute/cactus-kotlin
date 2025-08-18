@@ -1,0 +1,9 @@
+expect object CactusContext {
+    suspend fun initContext(modelPath: String): Long?
+    fun freeContext(handle: Long)
+    suspend fun completion(
+        handle: Long,
+        messages: List<ChatMessage>,
+        params: CactusCompletionParams
+    ): CactusCompletionResult
+}
