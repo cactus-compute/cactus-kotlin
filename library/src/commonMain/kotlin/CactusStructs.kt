@@ -1,3 +1,5 @@
+package com.cactus
+
 data class CactusCompletionParams(
     val temperature: Double = 0.8,
     val topK: Int = 40,

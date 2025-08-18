@@ -1,3 +1,5 @@
+package com.cactus
+
 class CactusLM {
     private var handle: Long? = null
     private var lastDownloadedFilename: String? = null
@@ -51,4 +53,4 @@ class CactusLM {
 expect suspend fun downloadModel(url: String, filename: String): Boolean
 expect suspend fun initializeModel(path: String): Long?
 expect suspend fun generateCompletion(handle: Long, messages: List<ChatMessage>, options: CactusCompletionParams): CactusCompletionResult?
-expect fun uninitializeModel(handle: Long) 
+expect fun uninitializeModel(handle: Long)

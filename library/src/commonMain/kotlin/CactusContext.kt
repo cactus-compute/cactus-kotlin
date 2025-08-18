@@ -1,3 +1,5 @@
+package com.cactus
+
 expect object CactusContext {
     suspend fun initContext(modelPath: String): Long?
     fun freeContext(handle: Long)

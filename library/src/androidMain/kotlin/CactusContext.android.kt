@@ -1,3 +1,5 @@
+package com.cactus
+
 import android.util.Log
 import com.sun.jna.Library
 import com.sun.jna.Native
@@ -37,7 +39,7 @@ internal interface CactusLibrary : Library {
 
 actual object CactusContext {
     private val lib = CactusLibrary.INSTANCE
-    private val json = Json { JsonBuilder.ignoreUnknownKeys = true }
+    private val json = Json { ignoreUnknownKeys = true }
     
     /**
      * Escape a string for JSON, matching the C++ parser expectations
@@ -128,7 +130,9 @@ actual object CactusContext {
             optionsJson
         )
 
-        if (result == 0) {
+        Log.i("Cactus", "Received completion result code: $result")
+
+        if (result > 0) {
             val responseText = String(responseBuffer).trim('\u0000')
 
             try {
