@@ -24,9 +24,9 @@ actual object CactusContext {
             .replace("\t", "\\t")   // Escape tabs
     }
 
-    actual suspend fun initContext(modelPath: String): Long? = withContext(Dispatchers.Default) {
+    actual suspend fun initContext(modelPath: String, contextSize: UInt): Long? = withContext(Dispatchers.Default) {
         return@withContext memScoped {
-            val handle = cactus_init(modelPath)
+            val handle = cactus_init(modelPath, contextSize.toULong())
             handle?.rawValue?.toLong()
         }
     }
@@ -41,7 +41,6 @@ actual object CactusContext {
         params: CactusCompletionParams
     ): CactusCompletionResult = withContext(Dispatchers.Default) {
 
-        // Convert messages to JSON format expected by C++ parser
         val messagesJson = buildString {
             append("[")
             messages.forEachIndexed { index, message ->

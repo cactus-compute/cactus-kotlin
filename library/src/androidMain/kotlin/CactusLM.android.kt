@@ -2,14 +2,18 @@ package com.cactus
 
 import android.content.Context
 import android.util.Log
-import com.sun.jna.Pointer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.BufferedInputStream
 import java.io.File
+import java.net.HttpURLConnection
 import java.net.URL
 import kotlin.io.copyTo
 import kotlin.io.outputStream
 import kotlin.io.use
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.io.IOException
 
 private var currentHandle: Long? = null
 
@@ -19,53 +23,102 @@ private val applicationContext: Context by lazy {
 
 actual suspend fun downloadModel(url: String, filename: String): Boolean {
     return withContext(Dispatchers.IO) {
+        val modelsDir = File(applicationContext.cacheDir, "models")
+        
+        val modelFolderName = filename.removeSuffix(".zip")
+        val modelFolder = File(modelsDir, modelFolderName)
+
+        if (modelFolder.exists() && modelFolder.listFiles()?.isNotEmpty() == true) {
+            Log.d("CactusLM", "Model folder '$modelFolderName' already exists. Skipping download.")
+            return@withContext true
+        }
+
+        val zipFile = File(modelsDir, filename)
+
         try {
-            val modelsDir = File(applicationContext.cacheDir, "models")
-            if (!modelsDir.exists()) modelsDir.mkdirs()
+            modelsDir.mkdirs()
+            Log.d("CactusLM", "Downloading model from: $url")
+            val urlConnection = URL(url).openConnection() as HttpURLConnection
+            urlConnection.connect()
+            if (urlConnection.responseCode != HttpURLConnection.HTTP_OK) {
+                throw IOException("Server returned HTTP ${urlConnection.responseCode} ${urlConnection.responseMessage}")
+            }
 
-            val modelFile = File(modelsDir, filename)
-            if (modelFile.exists()) return@withContext true
-
-            val urlConnection = URL(url).openConnection()
-            urlConnection.getInputStream().use { input ->
-                modelFile.outputStream().use { output ->
+            urlConnection.inputStream.use { input ->
+                zipFile.outputStream().use { output ->
                     input.copyTo(output)
                 }
             }
-            modelFile.exists()
+            Log.d("CactusLM", "Download complete. Saved to ${zipFile.path}")
+            Log.d("CactusLM", "Extracting ${zipFile.name}...")
+            modelFolder.mkdirs()
+
+            ZipInputStream(BufferedInputStream(zipFile.inputStream())).use { zipInput ->
+                var entry: ZipEntry?
+                while (zipInput.nextEntry.also { entry = it } != null) {
+                    val currentEntry = entry!!
+                    val outputFile = File(modelFolder, currentEntry.name)
+
+                    if (!outputFile.canonicalPath.startsWith(modelFolder.canonicalPath + File.separator)) {
+                        throw SecurityException("Zip path traversal attempt detected.")
+                    }
+                    
+                    if (currentEntry.isDirectory) {
+                        outputFile.mkdirs()
+                    } else {
+                        outputFile.parentFile?.mkdirs()
+                        outputFile.outputStream().use { fileOutput ->
+                            zipInput.copyTo(fileOutput)
+                        }
+                    }
+                    zipInput.closeEntry()
+                }
+            }
+            Log.d("CactusLM", "Extraction to '${modelFolder.path}' successful.")
+            true
         } catch (e: Exception) {
-            Log.e("CactusLM", "Failed to download model: ${e.message}")
+            Log.e("CactusLM", "Failed to download and extract model", e)
+            if (modelFolder.exists()) {
+                modelFolder.deleteRecursively()
+            }
             false
+        } finally {
+            if (zipFile.exists()) {
+                zipFile.delete()
+                Log.d("CactusLM", "Cleaned up temporary file: ${zipFile.name}")
+            }
         }
     }
 }
 
-actual suspend fun initializeModel(path: String): Long? {
+actual suspend fun initializeModel(modelFolderName: String, contextSize: UInt): Long? {
     return withContext(Dispatchers.Default) {
         try {
-            Log.d("CactusLM", "Loading model: $path")
-            val modelsDir = File(applicationContext.cacheDir, "models")
-            val modelFile = File(modelsDir, path)
+            Log.d("CactusLM", "Initializing model from folder: $modelFolderName")
 
-            if (!modelFile.exists()) {
-                Log.e("CactusLM", "Model file not found: ${modelFile.absolutePath}")
+            val modelsDir = File(applicationContext.cacheDir, "models")
+            val modelFolder = File(modelsDir, modelFolderName)
+
+            if (!modelFolder.exists() || !modelFolder.isDirectory) {
+                Log.e("CactusLM", "Model folder not found: ${modelFolder.absolutePath}")
                 return@withContext null
             }
 
-            Log.d("CactusLM", "Model file found: ${modelFile.absolutePath}")
+            Log.d("CactusLM", "Model folder found: ${modelFolder.absolutePath}")
+            Log.d("CactusLM", "Initializing context...")
 
-            Log.d("CactusLM", "Initializing  context...")
-            val handle = CactusContext.initContext(modelFile.absolutePath)
+            val handle = CactusContext.initContext(modelFolder.absolutePath, contextSize)
+
             if (handle != null) {
                 currentHandle = handle
-                Log.d("CactusLM", " Model loaded successfully with handle: $handle")
+                Log.d("CactusLM", "Model loaded successfully with handle: $handle")
                 handle
             } else {
-                Log.e("CactusLM", "Failed to initialize  context")
+                Log.e("CactusLM", "Failed to initialize context from path: ${modelFolder.absolutePath}")
                 null
             }
         } catch (e: Exception) {
-            Log.e("CactusLM", "Exception loading  model: ${e.message}", e)
+            Log.e("CactusLM", "Exception while initializing model: ${e.message}", e)
             null
         }
     }

@@ -36,16 +36,16 @@ actual suspend fun downloadModel(url: String, filename: String): Boolean {
     }
 }
 
-actual suspend fun initializeModel(path: String): Long? {
+actual suspend fun initializeModel(modelFolderName: String, contextSize: UInt): Long? {
     return withContext(Dispatchers.Default) {
         try {
-            println("CactusLM: Loading model: $path")
+            println("CactusLM: Loading model: $modelFolderName")
             val documentsDir = NSSearchPathForDirectoriesInDomains(
                 NSDocumentDirectory, NSUserDomainMask, true
             ).firstOrNull() as? String ?: return@withContext null
 
             val modelsDir = "$documentsDir/models"
-            val modelPath = "$modelsDir/$path"
+            val modelPath = "$modelsDir/$modelFolderName"
 
             if (!NSFileManager.defaultManager.fileExistsAtPath(modelPath)) {
                 println("CactusLM: Model file not found: $modelPath")
@@ -55,7 +55,7 @@ actual suspend fun initializeModel(path: String): Long? {
             println("CactusLM: Model file found: $modelPath")
 
             println("CactusLM: Initializing  context...")
-            val handle = CactusContext.initContext(modelPath)
+            val handle = CactusContext.initContext(modelPath, contextSize)
             if (handle != null) {
                 currentHandle = handle
                 println("CactusLM: Model loaded successfully with handle: $handle")

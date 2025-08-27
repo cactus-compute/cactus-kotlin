@@ -39,17 +39,20 @@ kotlin {
 
                     val archPath = when (iosTarget.name) {
                         "iosArm64" -> "ios-arm64"
-                        "iosX64" -> "ios-arm64_x86_64-simulator"
-                        "iosSimulatorArm64" -> "ios-arm64_x86_64-simulator"
+                        "iosSimulatorArm64" -> "ios-arm64-simulator"
                         else -> "ios-arm64"
                     }
 
-                    val frameworkPath = project.file("src/commonMain/resources/ios/cactus.xcframework/$archPath")
-                    includeDirs(project.file("$frameworkPath/cactus.framework/Headers"))
+                    val headerPath = project.file("src/commonMain/resources/ios/include")
+                    val libraryPath = project.file("src/commonMain/resources/ios/lib/$archPath")
+                    
+                    includeDirs(headerPath)
 
                     compilerOpts("-framework", "Accelerate", "-framework", "Foundation",
-                        "-framework", "Metal", "-framework", "MetalKit",
-                        "-framework", "cactus", "-F", frameworkPath.absolutePath)
+                        "-framework", "Metal", "-framework", "MetalKit")
+                    
+                    compilerOpts("-L${libraryPath.absolutePath}", "-lcactus")
+                    extraOpts("-libraryPath", libraryPath.absolutePath)
                 }
             }
         }
@@ -64,51 +67,11 @@ kotlin {
         }
         val androidMain by getting {
             dependencies {
-                implementation("net.java.dev.jna:jna:5.13.0@aar")
                 implementation("androidx.core:core-ktx:1.12.0")
                 implementation("androidx.activity:activity-compose:1.8.2")
             }
         }
     }
-}
-
-tasks.register("embedNativeLibrary") {
-    dependsOn("assembleCactusReleaseXCFramework")
-    doLast {
-        val xcframeworkDir = file("build/XCFrameworks/release/cactus.xcframework")
-
-        listOf(
-            "ios-arm64",
-            "ios-arm64_x86_64-simulator"
-        ).forEach { archPath ->
-            val sourceFramework = file("src/commonMain/resources/ios/cactus.xcframework/$archPath/cactus.framework/cactus")
-            val targetFramework = file("$xcframeworkDir/$archPath/cactus.framework/cactus")
-
-            if (sourceFramework.exists() && targetFramework.exists()) {
-                copy {
-                    from(sourceFramework)
-                    into(targetFramework.parent)
-                    rename { targetFramework.name }
-                }
-
-                val sourceFrameworkDir = file("src/commonMain/resources/ios/cactus.xcframework/$archPath/cactus.framework")
-                val targetFrameworkDir = file("$xcframeworkDir/$archPath/cactus.framework")
-
-                copy {
-                    from(sourceFrameworkDir) {
-                        include("*.metallib")
-                    }
-                    into(targetFrameworkDir)
-                }
-
-                println("Embedded native library and Metal shaders for $archPath")
-            }
-        }
-    }
-}
-
-tasks.named("publishToMavenLocal") {
-    dependsOn("embedNativeLibrary")
 }
 
 kmmbridge {
@@ -119,16 +82,26 @@ kmmbridge {
 android {
     namespace = "com.cactus.library"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
+    ndkVersion = "27.0.12077973"
+    
     defaultConfig {
         minSdk = libs.versions.android.minSdk.get().toInt()
+        
+        externalNativeBuild {
+            cmake {
+                cppFlags += "-std=c++17"
+                abiFilters += setOf("arm64-v8a")
+            }
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    sourceSets {
-        getByName("main") {
-            jniLibs.srcDirs("src/commonMain/resources/android/jniLibs")
+    
+    externalNativeBuild {
+        cmake {
+            path = file("src/androidMain/cpp/CMakeLists.txt")
         }
     }
 }

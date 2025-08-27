@@ -1,23 +1,25 @@
 package com.cactus
 
+import kotlin.collections.lastIndex
+
 class CactusLM {
     private var handle: Long? = null
     private var lastDownloadedFilename: String? = null
 
     suspend fun download(
-        url: String = "https://huggingface.co/Cactus-Compute/Qwen3-600m-Instruct-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf",
+        url: String = "https://ytmrvwsckmqyfpnwfcme.supabase.co/storage/v1/object/sign/cactus-models/qwen3-600m.zip?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV9kMjQzNjhmOS02MmEzLTQ2NDQtYjI0Ni01NjdjZWEyYjk2MTIiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJjYWN0dXMtbW9kZWxzL3F3ZW4zLTYwMG0uemlwIiwiaWF0IjoxNzU2MjcwNzI5LCJleHAiOjE3ODc4MDY3Mjl9.UJoA6ORgZ67FKXneN_ekyU3lTe1fJ4siryFM6uR3pMU",
         filename: String? = null
     ): Boolean {
-        val actualFilename = filename ?: url.substringAfterLast("/")
+        val actualFilename = filename ?: url.split('?').first().split('/').last()
         val success = downloadModel(url, actualFilename)
         if (success) {
-            lastDownloadedFilename = actualFilename
+            lastDownloadedFilename = actualFilename.replace(".zip", "")
         }
         return success
     }
     
-    suspend fun init(filename: String = lastDownloadedFilename ?: "Qwen3-0.6B-Q8_0.gguf"): Boolean {
-        handle = initializeModel(filename)
+    suspend fun init(filename: String = lastDownloadedFilename ?: "Qwen3-0.6B-Q8_0.gguf", contextSize: UInt = 2048u): Boolean {
+        handle = initializeModel(filename, contextSize)
         return handle != null
     }
     
@@ -51,6 +53,6 @@ class CactusLM {
 }
 
 expect suspend fun downloadModel(url: String, filename: String): Boolean
-expect suspend fun initializeModel(path: String): Long?
+expect suspend fun initializeModel(modelFolderName: String, contextSize: UInt): Long?
 expect suspend fun generateCompletion(handle: Long, messages: List<ChatMessage>, options: CactusCompletionParams): CactusCompletionResult?
 expect fun uninitializeModel(handle: Long)

@@ -9,8 +9,6 @@ object CactusContextInitializer {
     init {
         try {
             Log.d("CactusInit", "Starting Cactus library initialization...")
-            System.setProperty("jna.nosys", "true")
-            System.setProperty("jna.noclasspath", "true")
             Log.d("CactusInit", "Loading native library 'cactus'...")
             System.loadLibrary("cactus")
             Log.d("CactusInit", "Native library 'cactus' loaded successfully!")

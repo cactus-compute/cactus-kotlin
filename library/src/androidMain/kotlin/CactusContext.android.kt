@@ -1,44 +1,15 @@
 package com.cactus
 
 import android.util.Log
-import com.sun.jna.Library
-import com.sun.jna.Native
-import com.sun.jna.Pointer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.JsonBuilder
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
-import kotlin.collections.forEachIndexed
-import kotlin.collections.isNotEmpty
-import kotlin.collections.joinToString
-import kotlin.jvm.java
-import kotlin.text.replace
-import kotlin.text.toBooleanStrictOrNull
-import kotlin.text.toDoubleOrNull
-import kotlin.text.toIntOrNull
-import kotlin.text.trim
-
-internal interface CactusLibrary : Library {
-    fun cactus_init(modelPath: String): Pointer?
-    fun cactus_complete(
-        model: Pointer, 
-        messagesJson: String, 
-        responseBuffer: ByteArray, 
-        bufferSize: Int, 
-        optionsJson: String?
-    ): Int
-    fun cactus_destroy(model: Pointer)
-    
-    companion object {
-        val INSTANCE: CactusLibrary = Native.load("cactus", CactusLibrary::class.java)
-    }
-}
 
 
 actual object CactusContext {
-    private val lib = CactusLibrary.INSTANCE
+    private val lib = CactusLibrary
     private val json = Json { ignoreUnknownKeys = true }
     
     /**
@@ -53,13 +24,13 @@ actual object CactusContext {
             .replace("\t", "\\t")   // Escape tabs
     }
 
-    actual suspend fun initContext(modelPath: String): Long? = withContext(Dispatchers.Default) {
+    actual suspend fun initContext(modelPath: String, contextSize: UInt): Long? = withContext(Dispatchers.Default) {
         try {
             Log.d("Cactus", "Initializing context with model: $modelPath")
-            val handle = lib.cactus_init(modelPath)
-            if (handle != null && handle != Pointer.NULL) {
+            val handle = lib.cactus_init(modelPath, contextSize)
+            if (handle != 0L) {
                 Log.d("Cactus", "Context initialized successfully")
-                Pointer.nativeValue(handle)
+                handle
             } else {
                 Log.e("Cactus", "Failed to initialize context")
                 null
@@ -72,7 +43,7 @@ actual object CactusContext {
     
     actual fun freeContext(handle: Long) {
         try {
-            lib.cactus_destroy(Pointer(handle))
+            lib.cactus_destroy(handle)
             Log.d("Cactus", "Context destroyed")
         } catch (e: Exception) {
             Log.e("Cactus", "Error destroying context: ${e.message}")
@@ -85,7 +56,6 @@ actual object CactusContext {
         params: CactusCompletionParams
     ): CactusCompletionResult = withContext(Dispatchers.Default) {
 
-        // Convert messages to JSON format expected by C++ parser
         val messagesJson = buildString {
             append("[")
             messages.forEachIndexed { index, message ->
@@ -123,7 +93,7 @@ actual object CactusContext {
         val responseBuffer = ByteArray(params.bufferSize)
 
         val result = lib.cactus_complete(
-            Pointer(handle),
+            handle,
             messagesJson,
             responseBuffer,
             params.bufferSize,

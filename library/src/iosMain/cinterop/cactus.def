@@ -1,3 +1,4 @@
 headers = cactus_ffi.h
-compilerOpts = -framework Foundation -framework Accelerate -framework Metal -framework MetalKit -framework cactus
-linkerOpts = -framework cactus
+staticLibraries = libcactus.a
+libraryPaths = ../../../commonMain/resources/ios/lib/ios-arm64 ../../../commonMain/resources/ios/lib/ios-arm64-simulator
+compilerOpts = -framework Foundation -framework Accelerate -framework Metal -framework MetalKit
