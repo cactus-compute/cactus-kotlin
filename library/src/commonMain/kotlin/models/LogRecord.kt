@@ -1,9 +1,9 @@
 package com.cactus.models
 
-import com.cactus.Version
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
+import com.cactus.BuildConfig
 
 @Serializable
 data class LogRecord(
@@ -15,8 +15,8 @@ data class LogRecord(
     @SerialName("response_time") val responseTime: Double? = null,
     val model: String? = null,
     val tokens: Double? = null,
-    val framework: String = "kotlin",
-    @SerialName("framework_version") val frameworkVersion: String? = null,
+    @SerialName("framework") val framework: String = "kotlin",
+    @SerialName("framework_version") val frameworkVersion: String = BuildConfig.FRAMEWORK_VERSION,
     val success: Boolean? = null,
     val message: String? = null
 )

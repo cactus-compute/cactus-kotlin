@@ -47,7 +47,6 @@ class Telemetry private constructor(
     }
 
     suspend fun logInit(success: Boolean, options: CactusInitParams) {
-        print("Able to reach till log init")
         val record = LogRecord(
             eventType = "init",
             projectId = projectId,

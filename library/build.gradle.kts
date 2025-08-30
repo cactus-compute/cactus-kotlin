@@ -2,6 +2,7 @@ import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
+    alias(libs.plugins.buildconfig)
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinSerialization)
@@ -11,6 +12,11 @@ plugins {
 
 group = "com.cactus"
 version = "0.2.5"
+
+buildConfig {
+    packageName("com.cactus")
+    buildConfigField("String", "FRAMEWORK_VERSION", "\"$version\"")
+}
 
 kotlin {
     androidTarget {
