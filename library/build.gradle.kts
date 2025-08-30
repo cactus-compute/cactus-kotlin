@@ -18,6 +18,7 @@ kotlin {
         @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
+            freeCompilerArgs.add("-Xexpect-actual-classes")
         }
     }
 
@@ -29,6 +30,11 @@ kotlin {
         iosTarget.binaries.framework {
             baseName = "cactus"
             isStatic = true
+        }
+        
+        @OptIn(ExperimentalKotlinGradlePluginApi::class)
+        iosTarget.compilerOptions {
+            freeCompilerArgs.add("-Xexpect-actual-classes")
         }
 
         iosTarget.compilations.getByName("main") {
@@ -54,6 +60,26 @@ kotlin {
                     compilerOpts("-L${libraryPath.absolutePath}", "-lcactus")
                     extraOpts("-libraryPath", libraryPath.absolutePath)
                 }
+                
+                val cactus_util by creating {
+                    defFile(project.file("src/iosMain/cinterop/cactus_util.def"))
+                    packageName("com.cactus.util.native")
+
+                    val archPath = when (iosTarget.name) {
+                        "iosArm64" -> "ios-arm64"
+                        "iosSimulatorArm64" -> "ios-arm64-simulator"
+                        else -> "ios-arm64"
+                    }
+
+                    // Use the xcframework provided by the user
+                    val xcframeworkPath = project.file("src/commonMain/resources/ios/cactus_util.xcframework")
+                    val frameworkPath = xcframeworkPath.resolve("$archPath/cactus_util.framework")
+                    
+                    includeDirs(frameworkPath.resolve("Headers"))
+                    
+                    // Use the library path to find the dynamic library
+                    extraOpts("-libraryPath", frameworkPath.absolutePath)
+                }
             }
         }
     }
@@ -63,12 +89,22 @@ kotlin {
             dependencies {
                 implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0")
                 implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.1")
+                implementation("org.jetbrains.kotlinx:kotlinx-datetime:0.6.0")
+                implementation("io.ktor:ktor-client-core:3.1.3")
+                implementation("io.ktor:ktor-client-content-negotiation:3.1.3")
+                implementation("io.ktor:ktor-serialization-kotlinx-json:3.1.3")
             }
         }
         val androidMain by getting {
             dependencies {
                 implementation("androidx.core:core-ktx:1.12.0")
                 implementation("androidx.activity:activity-compose:1.8.2")
+                implementation("io.ktor:ktor-client-okhttp:3.1.3")
+            }
+        }
+        val iosMain by creating {
+            dependencies {
+                implementation("io.ktor:ktor-client-darwin:3.1.3")
             }
         }
     }
@@ -102,6 +138,13 @@ android {
     externalNativeBuild {
         cmake {
             path = file("src/androidMain/cpp/CMakeLists.txt")
+        }
+    }
+    
+    // Include prebuilt .so files
+    sourceSets {
+        getByName("main") {
+            jniLibs.srcDirs("src/commonMain/resources/android/libs")
         }
     }
 }

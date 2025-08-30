@@ -7,6 +7,13 @@
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "CactusJNI", __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, "CactusJNI", __VA_ARGS__)
 
+// External functions from cactus_util.so
+extern "C" {
+    char* register_app(const char* encrypted_payload);
+    char* get_device_id();
+    void set_android_data_directory(const char* data_directory);
+}
+
 extern "C" {
 
 JNIEXPORT jlong JNICALL
@@ -45,6 +52,54 @@ Java_com_cactus_CactusLibrary_cactus_1destroy(JNIEnv *env, jclass clazz, jlong m
     LOGI("Destroying cactus model");
     
     cactus_destroy(reinterpret_cast<cactus_model_t>(model));
+}
+
+// Utility JNI functions for device management
+JNIEXPORT jstring JNICALL
+Java_com_cactus_utils_DeviceInfo_1androidKt_nativeRegisterApp(JNIEnv *env, jclass clazz, jstring encrypted_payload) {
+    const char *payload = env->GetStringUTFChars(encrypted_payload, 0);
+    
+    LOGI("Calling register_app with payload");
+    
+    char* result = register_app(payload);
+    
+    env->ReleaseStringUTFChars(encrypted_payload, payload);
+    
+    if (result == nullptr) {
+        LOGE("register_app returned null");
+        return nullptr;
+    }
+    
+    jstring jresult = env->NewStringUTF(result);
+    
+    return jresult;
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_cactus_utils_DeviceInfo_1androidKt_nativeGetDeviceId(JNIEnv *env, jclass clazz) {
+    LOGI("Calling get_device_id");
+    
+    char* result = get_device_id();
+    
+    if (result == nullptr) {
+        LOGI("get_device_id returned null");
+        return nullptr;
+    }
+    
+    jstring jresult = env->NewStringUTF(result);
+    
+    return jresult;
+}
+
+JNIEXPORT void JNICALL
+Java_com_cactus_utils_DeviceInfo_1androidKt_nativeSetAndroidDataDirectory(JNIEnv *env, jclass clazz, jstring data_directory) {
+    const char *dir_str = env->GetStringUTFChars(data_directory, 0);
+    
+    LOGI("Setting Android data directory: %s", dir_str);
+    
+    set_android_data_directory(dir_str);
+    
+    env->ReleaseStringUTFChars(data_directory, dir_str);
 }
 
 }
