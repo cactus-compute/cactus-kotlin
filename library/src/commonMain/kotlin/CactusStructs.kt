@@ -1,5 +1,10 @@
 package com.cactus
 
+import kotlinx.datetime.Instant
+
+typealias CactusTokenCallback = (String) -> Boolean
+typealias CactusProgressCallback = (Double?, String, Boolean) -> Unit
+
 data class CactusCompletionParams(
     val temperature: Double = 0.8,
     val topK: Int = 40,
@@ -24,4 +29,18 @@ data class ChatMessage(
     val content: String,
     val role: String,
     val timestamp: Long? = null
+)
+
+data class CactusInitParams(
+    val model: String? = null,
+    val contextSize: Int? = null
+)
+
+data class CactusModel(
+    val createdAt: Instant,
+    val slug: String,
+    val sizeMb: Int,
+    val supportsToolCalling: Boolean,
+    val supportsVision: Boolean,
+    val name: String
 )

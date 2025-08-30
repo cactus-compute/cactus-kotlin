@@ -1,5 +1,6 @@
 package com.cactus
 
+import com.cactus.services.Telemetry
 import kotlin.collections.lastIndex
 
 class CactusLM {
@@ -19,8 +20,21 @@ class CactusLM {
     }
     
     suspend fun init(filename: String = lastDownloadedFilename ?: "Qwen3-0.6B-Q8_0.gguf", contextSize: UInt = 2048u): Boolean {
-        handle = initializeModel(filename, contextSize)
-        return handle != null
+        val initParams = CactusInitParams(model = filename, contextSize = contextSize.toInt())
+        
+        try {
+            handle = initializeModel(filename, contextSize)
+            val success = handle != null
+            
+            // Log initialization result
+            Telemetry.instance?.logInit(success, initParams)
+            
+            return success
+        } catch (e: Exception) {
+            // Log initialization failure
+            Telemetry.instance?.logInit(false, initParams)
+            throw CactusException("Failed to initialize model: ${e.message}", e)
+        }
     }
     
     suspend fun completion(
@@ -30,16 +44,36 @@ class CactusLM {
         topP: Float = 0.9f
     ): CactusCompletionResult? {
         val currMessage = listOf<ChatMessage>(ChatMessage(prompt, "user"))
-        val response: CactusCompletionResult? = handle?.let { h ->
-            generateCompletion(h, currMessage,
-                CactusCompletionParams(
-                    temperature = temperature.toDouble(),
-                    topP = topP.toDouble(),
-                    maxTokens = maxTokens
-                )
+        val params = CactusCompletionParams(
+            temperature = temperature.toDouble(),
+            topP = topP.toDouble(),
+            maxTokens = maxTokens
+        )
+        val initParams = CactusInitParams(model = lastDownloadedFilename)
+        
+        try {
+            val response: CactusCompletionResult? = handle?.let { h ->
+                generateCompletion(h, currMessage, params)
+            }
+            
+            // Log completion result
+            Telemetry.instance?.logCompletion(
+                result = response,
+                options = initParams,
+                success = response?.success
             )
+            
+            return response
+        } catch (e: Exception) {
+            // Log completion failure
+            Telemetry.instance?.logCompletion(
+                result = null,
+                options = initParams,
+                message = e.message,
+                success = false
+            )
+            throw CactusException("Completion failed: ${e.message}", e)
         }
-        return response
     }
     
     fun unload() {
