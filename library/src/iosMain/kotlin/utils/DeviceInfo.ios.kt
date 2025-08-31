@@ -38,7 +38,10 @@ actual suspend fun getDeviceMetadata(): Map<String, Any> {
 @OptIn(ExperimentalForeignApi::class)
 actual suspend fun getDeviceId(): String? {
     return try {
-        ""
+        val deviceIdPtr = get_device_id()
+        val deviceId = deviceIdPtr?.toKString()
+        
+        deviceId
     } catch (e: Exception) {
         println("Error getting device ID from native library: $e")
         null
@@ -48,7 +51,10 @@ actual suspend fun getDeviceId(): String? {
 @OptIn(ExperimentalForeignApi::class)
 actual suspend fun registerApp(encString: String): String? {
     return try {
-        ""
+        val deviceIdPtr = register_app(encString)
+        val deviceId = deviceIdPtr?.toKString()
+        
+        deviceId
     } catch (e: Exception) {
         println("Error registering app with native library: $e")
         null

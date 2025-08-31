@@ -51,6 +51,7 @@ kotlin {
 
                     val archPath = when (iosTarget.name) {
                         "iosArm64" -> "ios-arm64"
+                        "iosX64" -> "ios-arm64-simulator"
                         "iosSimulatorArm64" -> "ios-arm64-simulator"
                         else -> "ios-arm64"
                     }
@@ -73,18 +74,21 @@ kotlin {
 
                     val archPath = when (iosTarget.name) {
                         "iosArm64" -> "ios-arm64"
+                        "iosX64" -> "ios-arm64-simulator"
                         "iosSimulatorArm64" -> "ios-arm64-simulator"
                         else -> "ios-arm64"
                     }
 
-                    // Use the xcframework provided by the user
-                    val xcframeworkPath = project.file("src/commonMain/resources/ios/cactus_util.xcframework")
-                    val frameworkPath = xcframeworkPath.resolve("$archPath/cactus_util.framework")
+                    val headerPath = project.file("src/commonMain/resources/ios/include")
+                    val libraryPath = project.file("src/commonMain/resources/ios/lib/$archPath")
                     
-                    includeDirs(frameworkPath.resolve("Headers"))
+                    includeDirs(headerPath)
+
+                    compilerOpts("-framework", "Foundation", "-framework", "Accelerate", 
+                        "-framework", "Metal", "-framework", "MetalKit")
                     
-                    // Use the library path to find the dynamic library
-                    extraOpts("-libraryPath", frameworkPath.absolutePath)
+                    compilerOpts("-L${libraryPath.absolutePath}", "-lcactus_util")
+                    extraOpts("-libraryPath", libraryPath.absolutePath)
                 }
             }
         }
