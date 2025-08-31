@@ -53,7 +53,7 @@ fun App() {
             outputText = "Downloading model..."
             
             try {
-                val downloadSuccess = lm.download()
+                val downloadSuccess = lm.downloadModel()
                 if (downloadSuccess) {
                     isModelDownloaded = true
                     outputText = "Model downloaded successfully! Click \"Initialize Model\" to load it."
@@ -74,7 +74,7 @@ fun App() {
             outputText = "Initializing model..."
             
             try {
-                val loadSuccess = lm.init(contextSize = 2048u)
+                val loadSuccess = lm.initializeModel(params = CactusInitParams(contextSize = 2048))
                 if (loadSuccess) {
                     isModelLoaded = true
                     outputText = "Model initialized successfully! Ready to generate completions."
@@ -100,10 +100,12 @@ fun App() {
             outputText = "Generating response..."
             
             try {
-                val resp = lm.completion(
-                    prompt = "Hi, tell me a short joke",
-                    maxTokens = 50,
-                    temperature = 0.7f
+                val resp = lm.generateCompletion(
+                    messages = listOf(ChatMessage("Tell me a joke about computers.", "user")),
+                    params = CactusCompletionParams(
+                        maxTokens = 50,
+                        temperature = 0.7
+                    )
                 )
                 
                 if (resp != null && resp.success) {

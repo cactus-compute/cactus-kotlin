@@ -15,146 +15,110 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.io.IOException
 
-private var currentHandle: Long? = null
-
 private val applicationContext: Context by lazy {
     CactusContextInitializer.getApplicationContext()
 }
 
-actual suspend fun downloadModel(url: String, filename: String): Boolean {
+actual suspend fun downloadAndExtractModel(url: String, filename: String, folder: String): Boolean {
     return withContext(Dispatchers.IO) {
-        val modelsDir = File(applicationContext.cacheDir, "models")
+        val appDocDir = applicationContext.cacheDir
         
-        val modelFolderName = filename.removeSuffix(".zip")
-        val modelFolder = File(modelsDir, modelFolderName)
-
-        if (modelFolder.exists() && modelFolder.listFiles()?.isNotEmpty() == true) {
-            Log.d("CactusLM", "Model folder '$modelFolderName' already exists. Skipping download.")
-            return@withContext true
+        // Create a folder for the extracted model weights
+        val modelFolderPath = File(appDocDir, folder)
+        
+        // Check if the model folder already exists and contains files
+        if (modelFolderPath.exists()) {
+            val files = modelFolderPath.listFiles()
+            if (files != null && files.isNotEmpty()) {
+                Log.d("CactusLM", "Model folder already exists at ${modelFolderPath.absolutePath} with ${files.size} files")
+                return@withContext true
+            }
         }
-
-        val zipFile = File(modelsDir, filename)
-
+        
+        // Download the ZIP file to temporary location
+        val zipFilePath = File(appDocDir, filename)
+        
         try {
-            modelsDir.mkdirs()
-            Log.d("CactusLM", "Downloading model from: $url")
+            Log.d("CactusLM", "Downloading ZIP file from $url")
             val urlConnection = URL(url).openConnection() as HttpURLConnection
             urlConnection.connect()
+
             if (urlConnection.responseCode != HttpURLConnection.HTTP_OK) {
-                throw IOException("Server returned HTTP ${urlConnection.responseCode} ${urlConnection.responseMessage}")
+                throw IOException("Failed to download ZIP file: ${urlConnection.responseCode}")
             }
 
+            // Stream the response directly to a file to avoid memory issues
+            var totalBytes = 0
             urlConnection.inputStream.use { input ->
-                zipFile.outputStream().use { output ->
-                    input.copyTo(output)
+                zipFilePath.outputStream().use { output ->
+                    val buffer = ByteArray(8192)
+                    var bytesRead: Int
+                    while (input.read(buffer).also { bytesRead = it } != -1) {
+                        output.write(buffer, 0, bytesRead)
+                        totalBytes += bytesRead
+                        
+                        // Log progress every 10MB
+                        if (totalBytes % (10 * 1024 * 1024) == 0) {
+                            Log.d("CactusLM", "Downloaded ${totalBytes / (1024 * 1024)} MB...")
+                        }
+                    }
                 }
             }
-            Log.d("CactusLM", "Download complete. Saved to ${zipFile.path}")
-            Log.d("CactusLM", "Extracting ${zipFile.name}...")
-            modelFolder.mkdirs()
-
-            ZipInputStream(BufferedInputStream(zipFile.inputStream())).use { zipInput ->
+            
+            Log.d("CactusLM", "Downloaded $totalBytes bytes to ${zipFilePath.absolutePath}")
+            
+            // Create the model folder if it doesn't exist
+            modelFolderPath.mkdirs()
+            
+            // Extract the ZIP file
+            Log.d("CactusLM", "Extracting ZIP file...")
+            ZipInputStream(BufferedInputStream(zipFilePath.inputStream())).use { zipInput ->
                 var entry: ZipEntry?
                 while (zipInput.nextEntry.also { entry = it } != null) {
                     val currentEntry = entry!!
-                    val outputFile = File(modelFolder, currentEntry.name)
-
-                    if (!outputFile.canonicalPath.startsWith(modelFolder.canonicalPath + File.separator)) {
+                    val extractedFilePath = File(modelFolderPath, currentEntry.name)
+                    
+                    // Security check for path traversal
+                    if (!extractedFilePath.canonicalPath.startsWith(modelFolderPath.canonicalPath + File.separator)) {
                         throw SecurityException("Zip path traversal attempt detected.")
                     }
                     
                     if (currentEntry.isDirectory) {
-                        outputFile.mkdirs()
+                        extractedFilePath.mkdirs()
                     } else {
-                        outputFile.parentFile?.mkdirs()
-                        outputFile.outputStream().use { fileOutput ->
+                        // Create subdirectories if they don't exist
+                        extractedFilePath.parentFile?.mkdirs()
+                        
+                        // Write the file content
+                        extractedFilePath.outputStream().use { fileOutput ->
                             zipInput.copyTo(fileOutput)
                         }
                     }
                     zipInput.closeEntry()
                 }
             }
-            Log.d("CactusLM", "Extraction to '${modelFolder.path}' successful.")
+            
+            // Clean up the temporary ZIP file
+            zipFilePath.delete()
+            Log.d("CactusLM", "ZIP extraction completed successfully to ${modelFolderPath.absolutePath}")
             true
         } catch (e: Exception) {
-            Log.e("CactusLM", "Failed to download and extract model", e)
-            if (modelFolder.exists()) {
-                modelFolder.deleteRecursively()
-            }
+            Log.e("CactusLM", "Download and extraction failed: $e")
+            // Clean up partial files on failure
+            try {
+                if (zipFilePath.exists()) {
+                    zipFilePath.delete()
+                }
+                if (modelFolderPath.exists()) {
+                    modelFolderPath.deleteRecursively()
+                }
+            } catch (_: Exception) {}
             false
-        } finally {
-            if (zipFile.exists()) {
-                zipFile.delete()
-                Log.d("CactusLM", "Cleaned up temporary file: ${zipFile.name}")
-            }
         }
     }
 }
 
-actual suspend fun initializeModel(modelFolderName: String, contextSize: UInt): Long? {
-    return withContext(Dispatchers.Default) {
-        try {
-            Log.d("CactusLM", "Initializing model from folder: $modelFolderName")
-
-            val modelsDir = File(applicationContext.cacheDir, "models")
-            val modelFolder = File(modelsDir, modelFolderName)
-
-            if (!modelFolder.exists() || !modelFolder.isDirectory) {
-                Log.e("CactusLM", "Model folder not found: ${modelFolder.absolutePath}")
-                return@withContext null
-            }
-
-            Log.d("CactusLM", "Model folder found: ${modelFolder.absolutePath}")
-            Log.d("CactusLM", "Initializing context...")
-
-            val handle = CactusContext.initContext(modelFolder.absolutePath, contextSize)
-
-            if (handle != null) {
-                currentHandle = handle
-                Log.d("CactusLM", "Model loaded successfully with handle: $handle")
-                handle
-            } else {
-                Log.e("CactusLM", "Failed to initialize context from path: ${modelFolder.absolutePath}")
-                null
-            }
-        } catch (e: Exception) {
-            Log.e("CactusLM", "Exception while initializing model: ${e.message}", e)
-            null
-        }
-    }
-}
-
-actual suspend fun generateCompletion(
-    handle: Long,
-    messages: List<ChatMessage>,
-    options: CactusCompletionParams
-): CactusCompletionResult? {
-    return withContext(Dispatchers.Default) {
-        try {
-            Log.d("CactusLM", "Generating  completion")
-            val result = CactusContext.completion(handle, messages, options)
-            if (result.success) {
-                Log.d("CactusLM", " completion successful")
-                result
-            } else {
-                Log.e("CactusLM", " completion failed: ${result.response}")
-                null
-            }
-        } catch (e: Exception) {
-            Log.e("CactusLM", "Exception in  completion: ${e.message}", e)
-            null
-        }
-    }
-}
-
-actual fun uninitializeModel(handle: Long) {
-    try {
-        CactusContext.freeContext(handle)
-        if (currentHandle == handle) {
-            currentHandle = null
-        }
-        Log.d("CactusLM", " Model unloaded")
-    } catch (e: Exception) {
-        Log.e("CactusLM", "Error unloading  model: ${e.message}")
-    }
+actual fun getModelPath(modelFolder: String): String {
+    val appDocDir = applicationContext.cacheDir
+    return File(appDocDir, modelFolder).absolutePath
 }
