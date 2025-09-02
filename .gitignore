@@ -1,0 +1,9 @@
+.gradle/
+.kotlin/
+kotlin/library/libs/ios/cactus.xcframework
+kotlin/library/libs/android/jniLibs
+kotlin/example/iosApp/iosApp
+kotlin/example/iosApp/Frameworks
+kotlin/example/iosApp/iosApp.xcodeproj/Frameworks
+kotlin/library/src/commonMain/resources/ios/cactus.xcframework
+kotlin/library/src/commonMain/resources/android/jniLibs

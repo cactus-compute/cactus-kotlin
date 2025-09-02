@@ -1,0 +1,3 @@
+headers = cactus_ffi.h
+compilerOpts = -framework Foundation -framework Accelerate -framework Metal -framework MetalKit -framework cactus
+linkerOpts = -framework cactus 
