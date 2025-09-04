@@ -50,7 +50,7 @@ fun App() {
         try {
             val deviceId = CactusTelemetry.fetchDeviceId()
             deviceId?.let { it ->
-                CactusTelemetry.init("f3a1c0b0-4c6f-4261-ac15-0c03b12d83a2", it)
+                CactusTelemetry.init(it, "729ebf35-465f-441b-932d-f7819a36d8ca")
             }
         } catch (e: Exception) {
             println("App: Exception during telemetry init: $e")
@@ -232,7 +232,7 @@ fun App() {
                             }
                             Button(
                                 onClick = { initializeModel() },
-                                enabled = isModelDownloaded && !isInitializing,
+                                enabled = !isInitializing,
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(if (isModelLoaded) "Initialized ✓" else "Initialize")
@@ -268,7 +268,7 @@ fun App() {
                             }
                             Button(
                                 onClick = { initializeSTTModel() },
-                                enabled = isSttDownloaded && !isSttInitializing,
+                                enabled = !isSttInitializing,
                                 modifier = Modifier.weight(1f)
                             ) {
                                 Text(if (isSttLoaded) "Initialized ✓" else "Initialize")
