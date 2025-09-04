@@ -90,6 +90,27 @@ kotlin {
                     compilerOpts("-L${libraryPath.absolutePath}", "-lcactus_util")
                     extraOpts("-libraryPath", libraryPath.absolutePath)
                 }
+
+                val vosk by creating {
+                    defFile(project.file("src/commonMain/resources/cinterop/vosk.def"))
+                    packageName("com.vosk.native")
+
+                    val voskArchPath = when (iosTarget.name) {
+                        "iosArm64" -> "ios-arm64_armv7_armv7s"
+                        "iosX64" -> "ios-arm64_x86_64-simulator"
+                        "iosSimulatorArm64" -> "ios-arm64_x86_64-simulator"
+                        else -> "ios-arm64_armv7_armv7s"
+                    }
+
+                    val voskLibPath = project.file("src/commonMain/resources/ios/libvosk.xcframework/$voskArchPath")
+                    val voskHeaderPath = project.file("src/commonMain/resources/cinterop")
+
+                    includeDirs(voskHeaderPath)
+                    compilerOpts("-I", voskHeaderPath.absolutePath)
+
+                    // Link the static library
+                    extraOpts("-libraryPath", voskLibPath.absolutePath)
+                }
             }
         }
     }
@@ -103,6 +124,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-core:3.1.3")
                 implementation("io.ktor:ktor-client-content-negotiation:3.1.3")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:3.1.3")
+                implementation("com.squareup.okio:okio:3.9.0")
             }
         }
         val androidMain by getting {
@@ -110,11 +132,14 @@ kotlin {
                 implementation("androidx.core:core-ktx:1.12.0")
                 implementation("androidx.activity:activity-compose:1.8.2")
                 implementation("io.ktor:ktor-client-okhttp:3.1.3")
+                implementation("com.alphacephei:vosk-android:0.3.47@aar")
+                implementation("net.java.dev.jna:jna:5.13.0@aar")
             }
         }
         val iosMain by creating {
             dependencies {
                 implementation("io.ktor:ktor-client-darwin:3.1.3")
+                implementation("com.squareup.okio:okio:3.9.0")
             }
         }
     }

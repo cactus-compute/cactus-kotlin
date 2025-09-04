@@ -44,3 +44,37 @@ data class CactusModel(
     val supportsVision: Boolean,
     val name: String
 )
+
+data class SpeechRecognitionParams(
+    val language: String = "en-US",
+    val continuous: Boolean = false,
+    val maxDuration: Int = 30,
+    val enablePartialResults: Boolean = true,
+    val enableProfanityFilter: Boolean = true,
+    val enablePunctuation: Boolean = true
+)
+
+data class SpeechRecognitionResult(
+    val text: String,
+    val confidence: Float,
+    val isPartial: Boolean = false,
+    val alternatives: List<String> = emptyList()
+)
+
+sealed class SpeechError : Exception() {
+    object PermissionDenied : SpeechError()
+    object NotAvailable : SpeechError()
+    object NetworkError : SpeechError()
+    object AudioUnavailable : SpeechError()
+    object NoSpeechDetected : SpeechError()
+    object RecognitionUnavailable : SpeechError()
+    data class UnknownError(override val message: String) : SpeechError()
+}
+
+sealed class SpeechState {
+    object Idle : SpeechState()
+    object Listening : SpeechState()
+    object Processing : SpeechState()
+    data class Result(val result: SpeechRecognitionResult) : SpeechState()
+    data class Error(val error: SpeechError) : SpeechState()
+}
