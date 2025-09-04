@@ -21,8 +21,7 @@ actual suspend fun getDeviceMetadata(): Map<String, Any> {
             "os" to "iOS",
             "os_version" to systemVersion,
             "device_id" to identifierForVendor,
-            "brand" to "Apple",
-            "device_model" to model
+            "brand" to "Apple"
         )
     } catch (e: Exception) {
         mapOf(

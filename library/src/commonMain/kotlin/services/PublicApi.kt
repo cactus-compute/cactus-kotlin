@@ -3,8 +3,9 @@ package com.cactus.services
 import com.cactus.CactusModel
 
 object CactusTelemetry {
-    fun init(projectId: String, deviceId: String): Telemetry {
-        return Telemetry.init(projectId, deviceId)
+    fun init(deviceId: String?, cactusTelemetryToken: String?): Telemetry {
+        val projectId = CactusId.getProjectId()
+        return Telemetry.init(projectId, deviceId, cactusTelemetryToken)
     }
 
     suspend fun fetchDeviceId(): String? {

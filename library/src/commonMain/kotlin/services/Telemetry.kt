@@ -10,8 +10,9 @@ import com.cactus.utils.getDeviceMetadata
  * Telemetry service for logging and analytics
  */
 class Telemetry private constructor(
-    private val projectId: String,
-    private val deviceId: String
+    private val projectId: String?,
+    private val deviceId: String?,
+    private val cactusTelemetryToken: String?
 ) {
     companion object {
         private var _instance: Telemetry? = null
@@ -22,8 +23,8 @@ class Telemetry private constructor(
         val instance: Telemetry?
             get() = _instance
         
-        fun init(projectId: String, deviceId: String): Telemetry {
-            val telemetry = Telemetry(projectId, deviceId)
+        fun init(projectId: String?, deviceId: String?, cactusTelemetryToken: String?): Telemetry {
+            val telemetry = Telemetry(projectId, deviceId, cactusTelemetryToken)
             _instance = telemetry
             return telemetry
         }
@@ -52,7 +53,8 @@ class Telemetry private constructor(
             projectId = projectId,
             deviceId = deviceId,
             model = options.model,
-            success = success
+            success = success,
+            telemetryToken = cactusTelemetryToken
         )
 
         Supabase.sendLogRecord(record)
@@ -74,7 +76,8 @@ class Telemetry private constructor(
             model = options.model,
             tokens = result?.totalTokens?.toDouble(),
             success = success,
-            message = message
+            message = message,
+            telemetryToken = cactusTelemetryToken
         )
 
         Supabase.sendLogRecord(record)

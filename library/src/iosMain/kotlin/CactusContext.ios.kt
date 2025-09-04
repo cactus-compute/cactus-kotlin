@@ -8,6 +8,9 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import platform.CoreCrypto.CC_SHA1
+import platform.CoreCrypto.CC_SHA1_DIGEST_LENGTH
+import platform.Foundation.NSBundle
 
 actual object CactusContext {
     private val json = Json { ignoreUnknownKeys = true }
@@ -125,5 +128,24 @@ actual object CactusContext {
                 )
             }
         }
+    }
+
+    actual fun getBundleId(): String {
+        return NSBundle.mainBundle.bundleIdentifier ?: "unknown"
+    }
+
+    @OptIn(ExperimentalForeignApi::class)
+    actual fun sha1(input: ByteArray): ByteArray {
+        val out = ByteArray(CC_SHA1_DIGEST_LENGTH)
+        input.usePinned { inPinned ->
+            out.usePinned { outPinned ->
+                CC_SHA1(
+                    inPinned.addressOf(0).reinterpret<UByteVar>(),
+                    input.size.convert(),
+                    outPinned.addressOf(0).reinterpret()
+                )
+            }
+        }
+        return out
     }
 }

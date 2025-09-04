@@ -45,21 +45,12 @@ internal data class InternalModel(
 internal data class DeviceRegistrationRequest(
     val device_data: Map<String, String>
 )
-
-/**
- * Device registration response
- */
-@Serializable
-internal data class DeviceRegistrationResponse(
-    val encrypted_payload: String
-)
-
 /**
  * Supabase service for API communication
  */
 object Supabase {
-    private const val SUPABASE_URL = "https://ytmrvwsckmqyfpnwfcme.supabase.co"
-    private const val SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0bXJ2d3Nja21xeWZwbndmY21lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3MzE0MjIsImV4cCI6MjA3MTMwNzQyMn0.7SjWKuOSPpu2OI7g6BEgDw6SgDgcJ0TgXkI_wm9M-PA"
+    private const val SUPABASE_URL = "https://vlqqczxwyaodtcdmdmlw.supabase.co"
+    private const val SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZscXFjenh3eWFvZHRjZG1kbWx3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTE1MTg2MzIsImV4cCI6MjA2NzA5NDYzMn0.nBzqGuK9j6RZ6mOPWU2boAC_5H9XDs-fPpo5P3WZYbI"
     
     private val client = HttpClient {
         install(ContentNegotiation) {
@@ -121,6 +112,7 @@ object Supabase {
                 header("Authorization", "Bearer $SUPABASE_KEY")
                 header("Content-Type", "application/json")
                 header("Prefer", "return=minimal")
+                header("Content-Profile", "cactus")
                 
                 setBody(records)
             }
@@ -148,11 +140,8 @@ object Supabase {
             }
             
             if (response.status == HttpStatusCode.OK) {
-                val responseData = response.body<DeviceRegistrationResponse>()
                 println("Device registered successfully")
-                
-                // Call registerApp with encrypted payload
-                com.cactus.utils.registerApp(responseData.encrypted_payload)
+                com.cactus.utils.registerApp(response.body<String>())
             } else {
                 null
             }
@@ -167,6 +156,7 @@ object Supabase {
             val response = client.get("$SUPABASE_URL/rest/v1/models") {
                 header("apikey", SUPABASE_KEY)
                 header("Authorization", "Bearer $SUPABASE_KEY")
+                header("Accept-Profile", "cactus")
                 parameter("select", "*")
             }
             

@@ -5,7 +5,7 @@ import android.os.Build
 import android.provider.Settings
 import com.cactus.CactusContextInitializer
 
-// External JNI functions that will be loaded from the cactus library (which includes cactus_util)
+// External JNI functions that will be loaded from the cactus_util library
 external fun nativeRegisterApp(encryptedPayload: String): String?
 external fun nativeGetDeviceId(): String?
 external fun nativeSetAndroidDataDirectory(dataDirectory: String)
@@ -13,10 +13,10 @@ external fun nativeSetAndroidDataDirectory(dataDirectory: String)
 private object CactusUtilLoader {
     init {
         try {
-            // The cactus library already includes the utility functions
-            System.loadLibrary("cactus")
+            // The cactus_util library contains the utility functions
+            System.loadLibrary("cactus_util")
         } catch (e: UnsatisfiedLinkError) {
-            throw RuntimeException("Could not load cactus native library", e)
+            throw RuntimeException("Could not load cactus_util native library", e)
         }
     }
 }
@@ -30,9 +30,7 @@ actual suspend fun getDeviceMetadata(): Map<String, Any> {
             "os" to "Android",
             "os_version" to Build.VERSION.RELEASE,
             "device_id" to (Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID) ?: "unknown"),
-            "brand" to Build.BRAND,
-            "manufacturer" to Build.MANUFACTURER,
-            "sdk_version" to Build.VERSION.SDK_INT.toString()
+            "brand" to Build.BRAND
         )
     } catch (e: Exception) {
         mapOf(

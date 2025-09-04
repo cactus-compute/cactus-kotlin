@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.security.MessageDigest
 
 
 actual object CactusContext {
@@ -161,4 +162,11 @@ actual object CactusContext {
             )
         }
     }
+
+    actual fun getBundleId(): String {
+        return CactusContextInitializer.getApplicationContext().packageName
+    }
+
+    actual fun sha1(input: ByteArray): ByteArray =
+        MessageDigest.getInstance("SHA-1").digest(input)
 }

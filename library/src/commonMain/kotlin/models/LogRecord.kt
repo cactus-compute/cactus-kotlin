@@ -8,8 +8,8 @@ import com.cactus.BuildConfig
 @Serializable
 data class LogRecord(
     @SerialName("event_type") val eventType: String,
-    @SerialName("project_id") val projectId: String,
-    @SerialName("device_id") val deviceId: String,
+    @SerialName("project_id") val projectId: String?,
+    @SerialName("device_id") val deviceId: String?,
     val ttft: Double? = null,
     val tps: Double? = null,
     @SerialName("response_time") val responseTime: Double? = null,
@@ -18,7 +18,8 @@ data class LogRecord(
     @SerialName("framework") val framework: String = "kotlin",
     @SerialName("framework_version") val frameworkVersion: String = BuildConfig.FRAMEWORK_VERSION,
     val success: Boolean? = null,
-    val message: String? = null
+    val message: String? = null,
+    @SerialName("telemetry_token") val telemetryToken: String?
 )
 
 @Serializable
