@@ -57,9 +57,16 @@ class CactusSTT {
     }
 
     fun isReady(): Boolean = isInitialized
+
+    suspend fun isModelDownloaded(
+        modelName: String = lastDownloadedModelName
+    ): Boolean {
+        return checkModelsDownloaded(modelName, lastDownloadedSpkName)
+    }
 }
 
 expect suspend fun downloadSTTModel(model: String, modelName: String, spkModel: String, spkModelName: String): Boolean
 expect suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): Boolean
 expect suspend fun performSTT(params: SpeechRecognitionParams): SpeechRecognitionResult?
 expect fun stopSTT()
+expect suspend fun checkModelsDownloaded(modelName: String, spkModelName: String): Boolean

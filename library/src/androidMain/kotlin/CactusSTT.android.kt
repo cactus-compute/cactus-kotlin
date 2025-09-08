@@ -79,6 +79,28 @@ actual fun stopSTT() {
     stopSpeechRecognition()
 }
 
+actual suspend fun checkModelsDownloaded(modelName: String, spkModelName: String): Boolean {
+    return withContext(Dispatchers.IO) {
+        try {
+            val modelsDir = File(applicationContext.filesDir, "models/vosk")
+            if (!modelsDir.exists()) return@withContext false
+
+            val modelDir = File(modelsDir, modelName)
+            val spkModelDir = File(modelsDir, spkModelName)
+
+            val modelExists = modelDir.exists() && modelDir.isDirectory
+            val spkModelExists = spkModelDir.exists() && spkModelDir.isDirectory
+
+            println("Checking models - Main model ($modelName): $modelExists, Speaker model ($spkModelName): $spkModelExists")
+            
+            modelExists && spkModelExists
+        } catch (e: Exception) {
+            println("Error checking downloaded models: ${e.message}")
+            false
+        }
+    }
+}
+
 private fun extractZip(zipFile: File, targetDir: File) {
     try {
         java.util.zip.ZipInputStream(zipFile.inputStream().buffered()).use { zip ->

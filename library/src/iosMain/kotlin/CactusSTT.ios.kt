@@ -115,6 +115,32 @@ actual fun stopSTT() {
 }
 
 @OptIn(ExperimentalForeignApi::class)
+actual suspend fun checkModelsDownloaded(modelName: String, spkModelName: String): Boolean = withContext(Dispatchers.Default) {
+    try {
+        // Use the same directory as download function
+        val cachesDir = NSSearchPathForDirectoriesInDomains(
+            NSCachesDirectory, NSUserDomainMask, true
+        ).firstOrNull() as? String ?: return@withContext false
+
+        val modelsDir = "$cachesDir/models/vosk"
+        val fm = NSFileManager.defaultManager
+
+        val modelPath = "$modelsDir/$modelName"
+        val spkModelPath = "$modelsDir/$spkModelName"
+
+        val modelExists = fm.fileExistsAtPath(modelPath)
+        val spkModelExists = fm.fileExistsAtPath(spkModelPath)
+
+        println("Checking models - Main model ($modelName): $modelExists, Speaker model ($spkModelName): $spkModelExists")
+        
+        modelExists && spkModelExists
+    } catch (e: Exception) {
+        println("Error checking downloaded models: $e")
+        false
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class)
 private fun ensureFilePresentOrDownloadedAndUnzipped(
     urlString: String,
     fileName: String,
