@@ -2,6 +2,7 @@
 #define CACTUS_FFI_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #if __GNUC__ >= 4
   #define CACTUS_FFI_EXPORT __attribute__ ((visibility ("default")))
@@ -17,6 +18,8 @@ extern "C" {
 
 typedef void* cactus_model_t;
 
+typedef void (*cactus_token_callback)(const char* token, uint32_t token_id, void* user_data);
+
 CACTUS_FFI_EXPORT cactus_model_t cactus_init(const char* model_path, size_t context_size);
 
 CACTUS_FFI_EXPORT int cactus_complete(
@@ -24,8 +27,23 @@ CACTUS_FFI_EXPORT int cactus_complete(
     const char* messages_json,
     char* response_buffer,
     size_t buffer_size,
-    const char* options_json
+    const char* options_json,
+    cactus_token_callback callback,
+    void* user_data
 );
+
+
+CACTUS_FFI_EXPORT int cactus_embed(
+    cactus_model_t model,
+    const char* text,
+    float* embeddings_buffer,
+    size_t buffer_size,
+    size_t* embedding_dim
+);
+
+CACTUS_FFI_EXPORT void cactus_reset(cactus_model_t model);
+
+CACTUS_FFI_EXPORT void cactus_stop(cactus_model_t model);
 
 CACTUS_FFI_EXPORT void cactus_destroy(cactus_model_t model);
 

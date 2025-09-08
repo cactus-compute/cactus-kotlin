@@ -39,6 +39,7 @@ class CactusLM {
     suspend fun generateCompletion(
         messages: List<ChatMessage>,
         params: CactusCompletionParams,
+        onToken: CactusStreamingCallback? = null
     ): CactusCompletionResult? {
         val currentHandle = _handle
         if (currentHandle == null) {
@@ -53,7 +54,7 @@ class CactusLM {
         }
 
         try {
-            val result = CactusContext.completion(currentHandle, messages, params)
+            val result = CactusContext.completion(currentHandle, messages, params, onToken)
             
             // Track telemetry for successful completions (if telemetry is initialized)
             if (result.success && Telemetry.isInitialized) {

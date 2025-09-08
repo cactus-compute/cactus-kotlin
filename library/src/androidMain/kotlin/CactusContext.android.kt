@@ -54,9 +54,9 @@ actual object CactusContext {
     actual suspend fun completion(
         handle: Long, 
         messages: List<ChatMessage>,
-        params: CactusCompletionParams
+        params: CactusCompletionParams,
+        onToken: CactusStreamingCallback?
     ): CactusCompletionResult = withContext(Dispatchers.Default) {
-
         val messagesJson = buildString {
             append("[")
             messages.forEachIndexed { index, message ->
@@ -92,13 +92,24 @@ actual object CactusContext {
         }
 
         val responseBuffer = ByteArray(params.bufferSize)
+        val fullResponse = StringBuilder()
+
+        // Create callback wrapper if onToken is provided
+        val callback: ((String, Int) -> Unit)? = if (onToken != null) {
+            { token, tokenId ->
+                onToken(token, tokenId.toUInt())
+                fullResponse.append(token)
+            }
+        } else null
 
         val result = lib.cactus_complete(
             handle,
             messagesJson,
             responseBuffer,
             params.bufferSize,
-            optionsJson
+            optionsJson,
+            callback,
+            0L // userData - not used in our implementation
         )
 
         Log.i("Cactus", "Received completion result code: $result")
@@ -110,7 +121,14 @@ actual object CactusContext {
                 val jsonResponse = json.parseToJsonElement(responseText).jsonObject
                 val success =
                     jsonResponse["success"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true
-                val response = jsonResponse["response"]?.jsonPrimitive?.content ?: responseText
+                
+                // Use streaming response if we have it, otherwise use the response from buffer
+                val response = if (onToken != null && fullResponse.isNotEmpty()) {
+                    fullResponse.toString()
+                } else {
+                    jsonResponse["response"]?.jsonPrimitive?.content ?: responseText
+                }
+                
                 val timeToFirstTokenMs =
                     jsonResponse["time_to_first_token_ms"]?.jsonPrimitive?.content?.toDoubleOrNull()
                         ?: 0.0

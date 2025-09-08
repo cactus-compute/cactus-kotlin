@@ -12,7 +12,9 @@ internal object CactusLibrary {
         messagesJson: String,
         responseBuffer: ByteArray,
         bufferSize: Int,
-        optionsJson: String?
+        optionsJson: String?,
+        callback: ((String, Int) -> Unit)?,
+        userData: Long
     ): Int
     external fun cactus_destroy(model: Long)
 }

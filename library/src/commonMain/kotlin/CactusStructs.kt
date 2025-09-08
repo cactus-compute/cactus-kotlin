@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 
 typealias CactusTokenCallback = (String) -> Boolean
 typealias CactusProgressCallback = (Double?, String, Boolean) -> Unit
+typealias CactusStreamingCallback = (token: String, tokenId: UInt) -> Unit
 
 data class CactusCompletionParams(
     val temperature: Double = 0.8,
