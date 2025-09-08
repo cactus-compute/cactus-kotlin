@@ -44,10 +44,9 @@ class CactusLM {
         if (currentHandle == null) {
             if (Telemetry.isInitialized) {
                 Telemetry.instance?.logCompletion(
-                    null, 
+                    CactusCompletionResult(success = false),
                     CactusInitParams(), 
-                    message = "Context not initialized", 
-                    success = false
+                    message = "Context not initialized",
                 )
             }
             return null
@@ -61,7 +60,7 @@ class CactusLM {
                 val initParams = CactusInitParams(
                     model = _lastDownloadedModel,
                 )
-                Telemetry.instance?.logCompletion(result, initParams, success = true)
+                Telemetry.instance?.logCompletion(result, initParams)
             }
             
             return result
@@ -71,7 +70,7 @@ class CactusLM {
                 val initParams = CactusInitParams(
                     model = _lastDownloadedModel,
                 )
-                Telemetry.instance?.logCompletion(null, initParams, message = e.message, success = false)
+                Telemetry.instance?.logCompletion(CactusCompletionResult(success = false), initParams, message = e.message)
             }
             throw e
         }

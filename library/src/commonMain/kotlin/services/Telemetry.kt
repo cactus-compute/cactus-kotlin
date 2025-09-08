@@ -64,7 +64,6 @@ class Telemetry private constructor(
         result: CactusCompletionResult?,
         options: CactusInitParams,
         message: String? = null,
-        success: Boolean? = null
     ) {
         val record = LogRecord(
             eventType = "completion",
@@ -75,7 +74,7 @@ class Telemetry private constructor(
             responseTime = result?.totalTimeMs,
             model = options.model,
             tokens = result?.totalTokens?.toDouble(),
-            success = success,
+            success = result?.success,
             message = message,
             telemetryToken = cactusTelemetryToken
         )
