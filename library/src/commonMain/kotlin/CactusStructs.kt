@@ -53,11 +53,8 @@ data class SpeechRecognitionParams(
 
 data class SpeechRecognitionResult(
     val success: Boolean,
-    val text: String,
-    val confidence: Float,
-    val isPartial: Boolean = false,
-    val alternatives: List<String> = emptyList(),
-    val responseTime: Double? = null
+    val text: String? = null,
+    val processingTime: Double? = null
 )
 
 sealed class SpeechError : Exception() {

@@ -83,10 +83,7 @@ actual suspend fun performSTT(params: SpeechRecognitionParams): SpeechRecognitio
         if (!isSpeechRecognitionAvailable()) {
             println("Vosk model not loaded on this device")
             return SpeechRecognitionResult(
-                success = false,
-                text = "",
-                confidence = 0.0f,
-                isPartial = false
+                success = false
             )
         }
 

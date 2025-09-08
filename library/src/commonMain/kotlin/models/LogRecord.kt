@@ -19,7 +19,8 @@ data class LogRecord(
     @SerialName("framework_version") val frameworkVersion: String = BuildConfig.FRAMEWORK_VERSION,
     val success: Boolean? = null,
     val message: String? = null,
-    @SerialName("telemetry_token") val telemetryToken: String?
+    @SerialName("telemetry_token") val telemetryToken: String?,
+    @SerialName("audio_duration") val audioDuration: Long? = null,
 )
 
 @Serializable

@@ -74,10 +74,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams): Sp
             if (continuation.isActive) {
                 continuation.resume(SpeechRecognitionResult(
                     success = false,
-                    text = "Setting up offline speech recognition...",
-                    confidence = 0.0f,
-                    isPartial = false,
-                    alternatives = emptyList()
+                    text = "Setting up offline speech recognition..."
                 ))
             }
             return@suspendCancellableCoroutine
@@ -96,10 +93,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams): Sp
             if (continuation.isActive) {
                 continuation.resume(SpeechRecognitionResult(
                     success = false,
-                    text = "Microphone permission required. Please grant RECORD_AUDIO permission in app settings.",
-                    confidence = 0.0f,
-                    isPartial = false,
-                    alternatives = emptyList()
+                    text = "Microphone permission required. Please grant RECORD_AUDIO permission in app settings."
                 ))
             }
             return@suspendCancellableCoroutine
@@ -247,10 +241,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams): Sp
                         SpeechRecognitionResult(
                             success = true,
                             text = finalResult,
-                            confidence = 0.9f,
-                            isPartial = false,
-                            alternatives = emptyList(),
-                            responseTime = responseTimeMs
+                            processingTime = responseTimeMs
                         )
                     } else {
                         null
@@ -275,7 +266,10 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams): Sp
             println("Failed to start Vosk speech recognition: $e")
             isListening = false
             if (continuation.isActive) {
-                continuation.resume(null)
+                continuation.resume(SpeechRecognitionResult(
+                    success = false,
+                    text = e.message
+                ))
             }
         }
     }

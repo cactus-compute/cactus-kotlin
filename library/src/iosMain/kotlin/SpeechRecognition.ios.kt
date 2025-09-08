@@ -103,10 +103,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams): Sp
             if (continuation.isActive) {
                 continuation.resume(SpeechRecognitionResult(
                     success = false,
-                    text = "Setting up offline speech recognition...",
-                    confidence = 0.0f,
-                    isPartial = false,
-                    alternatives = emptyList()
+                    text = "Setting up offline speech recognition..."
                 ))
             }
             return@suspendCancellableCoroutine
@@ -125,10 +122,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams): Sp
             if (continuation.isActive) {
                 continuation.resume(SpeechRecognitionResult(
                     success = false,
-                    text = "Microphone permission required. Please grant RECORD_AUDIO permission in app settings.",
-                    confidence = 0.0f,
-                    isPartial = false,
-                    alternatives = emptyList()
+                    text = "Microphone permission required. Please grant RECORD_AUDIO permission in app settings."
                 ))
             }
             return@suspendCancellableCoroutine
@@ -195,11 +189,8 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams): Sp
                 val result = if (!resultText.isNullOrEmpty()) {
                     SpeechRecognitionResult(
                         success = true,
-                        text = resultText!!,
-                        confidence = 0.9f,
-                        isPartial = false,
-                        alternatives = emptyList(),
-                        responseTime = responseTimeMs
+                        text = resultText,
+                        processingTime = responseTimeMs
                     )
                 } else {
                     null
@@ -308,7 +299,10 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams): Sp
             println("Failed to start Vosk speech recognition: $e")
             stopCurrentRecognition?.invoke()
             if (continuation.isActive) {
-                continuation.resume(null)
+                continuation.resume(SpeechRecognitionResult(
+                    success = false,
+                    text = e.message
+                ))
             }
         }
     }
