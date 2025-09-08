@@ -37,7 +37,7 @@ actual suspend fun initializeSpeechRecognition(modelFolder: String, spkModelFold
         val modelDir = File(baseDir, modelFolder)
         val spkModelDir = File(baseDir, spkModelFolder)
 
-        print("Initializing speech recognition with modelDir: ${modelDir.absolutePath}, spkModelDir: ${spkModelDir.absolutePath}")
+        println("Initializing speech recognition with modelDir: ${modelDir.absolutePath}, spkModelDir: ${spkModelDir.absolutePath}")
 
         if (!modelDir.exists() || !modelDir.isDirectory || !spkModelDir.exists() || !spkModelDir.isDirectory) {
             return@withContext false

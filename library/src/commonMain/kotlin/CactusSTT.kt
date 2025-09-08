@@ -1,46 +1,61 @@
 package com.cactus
 
+import com.cactus.services.Supabase
 import com.cactus.services.Telemetry
 import kotlin.time.TimeSource
 
 class CactusSTT {
     private var isInitialized = false
-    private var lastDownloadedModelName: String = "vosk-model-small-en-us-0.15"
-    private var lastDownloadedSpkName: String = "vosk-model-spk-0.4"
+    private var lastDownloadedModelName: String = "vosk-en-us"
     private val timeSource = TimeSource.Monotonic
 
 
     // spk model is universal, no need to change it for different languages
-    private val spkModel: String = "https://alphacephei.com/vosk/models/vosk-model-spk-0.4.zip"
+    private val spkModelFolder: String = "vosk-model-spk-0.4"
+    private val spkModelUrl: String = "https://alphacephei.com/vosk/models/vosk-model-spk-0.4.zip"
+
+    private var voiceModels = listOf<VoiceModel>()
 
     suspend fun download(
-        model: String = "https://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip"
+        model: String = "vosk-en-us"
     ): Boolean {
-        val modelFileName = model.substringAfterLast("/")
-        val spkModelFileName = spkModel.substringAfterLast("/")
-        val success = downloadSTTModel(model, modelFileName, spkModel, spkModelFileName)
+        val currentModel  = getModel(model) ?: run {
+            println("No data found for model: $model")
+            return false
+        }
+        val success = downloadSTTModel(currentModel.url, currentModel.file_name + ".zip", spkModelUrl, spkModelFolder + ".zip")
         if (success) {
-            lastDownloadedModelName = modelFileName.removeSuffix(".zip")
-            lastDownloadedSpkName = spkModelFileName.removeSuffix(".zip")
+            lastDownloadedModelName = model
         }
         return success
     }
 
-    suspend fun init(model: String? = lastDownloadedModelName, spkModel: String? = lastDownloadedSpkName): Boolean {
+    suspend fun init(model: String? = lastDownloadedModelName): Boolean {
         isInitialized = false
-        if(model != null && spkModel != null) {
-            isInitialized = initializeSTT(model, spkModel)
-        }
-        if (Telemetry.isInitialized) {
-            Telemetry.instance?.logInit(isInitialized, CactusInitParams(
-                model = model
-            ))
+        try {
+            val currentModel = getModel(model!!) ?: run {
+                println("No data found for model: $model")
+                return false
+            }
+            isInitialized = initializeSTT(currentModel.file_name, spkModelFolder)
+            if (Telemetry.isInitialized) {
+                Telemetry.instance?.logInit(isInitialized, CactusInitParams(
+                    model = model
+                ))
+            }
+        } catch (e: Exception) {
+            println("Error initializing STT: ${e.message}")
+            e.printStackTrace()
         }
         return isInitialized
     }
 
     suspend fun transcribe(params: SpeechRecognitionParams): SpeechRecognitionResult? {
         if (isInitialized) {
+            val currentModel = getModel(lastDownloadedModelName) ?: run {
+                println("No data found for model: $lastDownloadedModelName")
+                return null
+            }
             val startTime = timeSource.markNow()
             val result = performSTT(params)
             if (Telemetry.isInitialized) {
@@ -50,7 +65,7 @@ class CactusSTT {
                         response = result?.text,
                         totalTimeMs = result?.processingTime
                     ),
-                    CactusInitParams(model = lastDownloadedModelName),
+                    CactusInitParams(model = currentModel.file_name),
                     message = if (result?.success == false) result.text else null,
                     responseTime = startTime.elapsedNow().inWholeMilliseconds.toDouble()
                 )
@@ -66,15 +81,36 @@ class CactusSTT {
 
     fun isReady(): Boolean = isInitialized
 
+    suspend fun getVoiceModels(): List<VoiceModel> {
+        if (voiceModels.isEmpty()) {
+            voiceModels = Supabase.fetchVoiceModels()
+            for (model in voiceModels) {
+                model.isDownloaded = modelExists(model.file_name)
+            }
+        }
+        return voiceModels
+    }
+
     suspend fun isModelDownloaded(
         modelName: String = lastDownloadedModelName
     ): Boolean {
-        return checkModelsDownloaded(modelName, lastDownloadedSpkName)
+        val currentModel = getModel(modelName) ?: run {
+            println("No data found for model: $lastDownloadedModelName")
+            return false
+        }
+        return modelExists(currentModel.file_name) && modelExists(spkModelFolder)
+    }
+
+    private suspend fun getModel(slug: String): VoiceModel? {
+        if (voiceModels.isEmpty()) {
+            voiceModels = getVoiceModels()
+        }
+        return voiceModels.firstOrNull { it.slug == slug }
     }
 }
 
-expect suspend fun downloadSTTModel(model: String, modelName: String, spkModel: String, spkModelName: String): Boolean
+expect suspend fun downloadSTTModel(modelUrl: String, modelName: String, spkModelUrl: String, spkModelName: String): Boolean
 expect suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): Boolean
 expect suspend fun performSTT(params: SpeechRecognitionParams): SpeechRecognitionResult?
 expect fun stopSTT()
-expect suspend fun checkModelsDownloaded(modelName: String, spkModelName: String): Boolean
+expect suspend fun modelExists(modelName: String): Boolean

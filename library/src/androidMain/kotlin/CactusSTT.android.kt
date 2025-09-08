@@ -10,7 +10,7 @@ private val applicationContext: Context by lazy {
     CactusContextInitializer.getApplicationContext()
 }
 
-actual suspend fun downloadSTTModel(model: String, modelName: String, spkModel: String, spkModelName: String): Boolean {
+actual suspend fun downloadSTTModel(modelUrl: String, modelName: String, spkModelUrl: String, spkModelName: String): Boolean {
     return withContext(Dispatchers.IO) {
         try {
             val modelsDir = File(applicationContext.filesDir, "models/vosk")
@@ -20,7 +20,7 @@ actual suspend fun downloadSTTModel(model: String, modelName: String, spkModel: 
             val modelFile = File(modelsDir, modelName)
             if (modelFile.exists()) return@withContext true
 
-            val modelConnection = URL(model).openConnection()
+            val modelConnection = URL(modelUrl).openConnection()
             modelConnection.getInputStream().use { input ->
                 modelFile.outputStream().use { output ->
                     input.copyTo(output)
@@ -33,7 +33,7 @@ actual suspend fun downloadSTTModel(model: String, modelName: String, spkModel: 
             }
 
             // Download speaker model
-            val spkModelConnection = URL(spkModel).openConnection()
+            val spkModelConnection = URL(spkModelUrl).openConnection()
             val spkModelFile = File(modelsDir, spkModelName)
             if (spkModelFile.exists()) return@withContext true
             spkModelConnection.getInputStream().use { input ->
@@ -79,21 +79,18 @@ actual fun stopSTT() {
     stopSpeechRecognition()
 }
 
-actual suspend fun checkModelsDownloaded(modelName: String, spkModelName: String): Boolean {
+actual suspend fun modelExists(modelName: String): Boolean {
     return withContext(Dispatchers.IO) {
         try {
             val modelsDir = File(applicationContext.filesDir, "models/vosk")
             if (!modelsDir.exists()) return@withContext false
 
             val modelDir = File(modelsDir, modelName)
-            val spkModelDir = File(modelsDir, spkModelName)
-
             val modelExists = modelDir.exists() && modelDir.isDirectory
-            val spkModelExists = spkModelDir.exists() && spkModelDir.isDirectory
 
-            println("Checking models - Main model ($modelName): $modelExists, Speaker model ($spkModelName): $spkModelExists")
-            
-            modelExists && spkModelExists
+            println("Checking models - Main model ($modelName): $modelExists")
+
+            modelExists
         } catch (e: Exception) {
             println("Error checking downloaded models: ${e.message}")
             false

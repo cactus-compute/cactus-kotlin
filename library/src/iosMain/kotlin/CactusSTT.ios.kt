@@ -13,9 +13,9 @@ import okio.openZip
 
 @OptIn(ExperimentalForeignApi::class)
 actual suspend fun downloadSTTModel(
-    model: String,
+    modelUrl: String,
     modelName: String,
-    spkModel: String,
+    spkModelUrl: String,
     spkModelName: String
 ): Boolean = withContext(Dispatchers.Default) {
     try {
@@ -31,7 +31,7 @@ actual suspend fun downloadSTTModel(
 
         // Download main model
         val modelOk = ensureFilePresentOrDownloadedAndUnzipped(
-            urlString = model,
+            urlString = modelUrl,
             fileName = modelName,
             baseDir = modelsDir
         )
@@ -39,7 +39,7 @@ actual suspend fun downloadSTTModel(
 
         // Download speaker model
         val spkOk = ensureFilePresentOrDownloadedAndUnzipped(
-            urlString = spkModel,
+            urlString = spkModelUrl,
             fileName = spkModelName,
             baseDir = modelsDir
         )
@@ -112,7 +112,7 @@ actual fun stopSTT() {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-actual suspend fun checkModelsDownloaded(modelName: String, spkModelName: String): Boolean = withContext(Dispatchers.Default) {
+actual suspend fun modelExists(modelName: String): Boolean = withContext(Dispatchers.Default) {
     try {
         // Use the same directory as download function
         val cachesDir = NSSearchPathForDirectoriesInDomains(
@@ -123,14 +123,11 @@ actual suspend fun checkModelsDownloaded(modelName: String, spkModelName: String
         val fm = NSFileManager.defaultManager
 
         val modelPath = "$modelsDir/$modelName"
-        val spkModelPath = "$modelsDir/$spkModelName"
-
         val modelExists = fm.fileExistsAtPath(modelPath)
-        val spkModelExists = fm.fileExistsAtPath(spkModelPath)
 
-        println("Checking models - Main model ($modelName): $modelExists, Speaker model ($spkModelName): $spkModelExists")
+        println("Checking models - Main model ($modelName): $modelExists")
         
-        modelExists && spkModelExists
+        modelExists
     } catch (e: Exception) {
         println("Error checking downloaded models: $e")
         false

@@ -1,6 +1,7 @@
 package com.cactus
 
 import kotlinx.datetime.Instant
+import kotlinx.serialization.Serializable
 
 typealias CactusTokenCallback = (String) -> Boolean
 typealias CactusProgressCallback = (Double?, String, Boolean) -> Unit
@@ -43,6 +44,17 @@ data class CactusModel(
     val supportsToolCalling: Boolean,
     val supportsVision: Boolean,
     val name: String
+)
+
+@Serializable
+data class VoiceModel(
+    val created_at: String,
+    val slug: String,
+    val language: String,
+    val url: String,
+    val size_mb: Int,
+    val file_name: String,
+    var isDownloaded: Boolean = false
 )
 
 data class SpeechRecognitionParams(

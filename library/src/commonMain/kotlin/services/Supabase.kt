@@ -1,8 +1,8 @@
 package com.cactus.services
 
 import com.cactus.CactusModel
+import com.cactus.VoiceModel
 import com.cactus.models.LogRecord
-import com.cactus.utils.getDeviceMetadata
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.contentnegotiation.*
@@ -174,6 +174,26 @@ object Supabase {
             }
         } catch (e: Exception) {
             println("Error fetching models: $e")
+            emptyList()
+        }
+    }
+
+    suspend fun fetchVoiceModels(): List<VoiceModel> {
+        return try {
+            val response = client.get("$SUPABASE_URL/rest/v1/voice_models") {
+                header("apikey", SUPABASE_KEY)
+                header("Authorization", "Bearer $SUPABASE_KEY")
+                header("Accept-Profile", "cactus")
+                parameter("select", "*")
+            }
+
+            if (response.status == HttpStatusCode.OK) {
+                response.body<List<VoiceModel>>()
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            println("Error fetching voice models: $e")
             emptyList()
         }
     }
