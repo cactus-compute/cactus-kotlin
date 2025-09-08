@@ -28,13 +28,30 @@ class CactusSTT(
         if(model != null && spkModel != null) {
             isInitialized = initializeSTT(model, spkModel)
         }
+        if (Telemetry.isInitialized) {
+            Telemetry.instance?.logInit(isInitialized, CactusInitParams(
+                model = model
+            ))
+        }
         return isInitialized
     }
 
-    suspend fun transcribe(): SpeechRecognitionResult? {
-        return if (isInitialized) {
-            performSTT(language, maxDuration, sampleRate)
-        } else null
+    suspend fun transcribe(params: SpeechRecognitionParams): SpeechRecognitionResult? {
+        if (isInitialized) {
+            val result = performSTT(params)
+            if (Telemetry.isInitialized) {
+                Telemetry.instance?.logTranscription(
+                    CactusCompletionResult(
+                        success = result?.success == true,
+                        response = result?.text,
+                        totalTimeMs = result?.responseTime
+                    ),
+                    CactusInitParams(model = lastDownloadedModelName)
+                )
+            }
+            return result
+        }
+        return null
     }
 
     fun stop() {

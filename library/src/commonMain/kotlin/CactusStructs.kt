@@ -16,13 +16,13 @@ data class CactusCompletionParams(
 
 data class CactusCompletionResult(
     val success: Boolean,
-    val response: String,
-    val timeToFirstTokenMs: Double,
-    val totalTimeMs: Double,
-    val tokensPerSecond: Double,
-    val prefillTokens: Int,
-    val decodeTokens: Int,
-    val totalTokens: Int
+    val response: String? = null,
+    val timeToFirstTokenMs: Double? = null,
+    val totalTimeMs: Double? = null,
+    val tokensPerSecond: Double? = null,
+    val prefillTokens: Int? = null,
+    val decodeTokens: Int? = null,
+    val totalTokens: Int? = null
 )
 
 data class ChatMessage(

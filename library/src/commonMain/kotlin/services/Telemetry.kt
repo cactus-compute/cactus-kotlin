@@ -82,4 +82,21 @@ class Telemetry private constructor(
 
         Supabase.sendLogRecord(record)
     }
+
+    suspend fun logTranscription(
+        result: CactusCompletionResult?,
+        options: CactusInitParams,
+    ) {
+        val record = LogRecord(
+            eventType = "transcription",
+            projectId = projectId,
+            deviceId = deviceId,
+            responseTime = result?.totalTimeMs,
+            model = options.model,
+            success = result?.success,
+            telemetryToken = cactusTelemetryToken
+        )
+
+        Supabase.sendLogRecord(record)
+    }
 }
