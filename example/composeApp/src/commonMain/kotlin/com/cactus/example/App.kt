@@ -80,21 +80,26 @@ fun App() {
 
     fun downLoadSttModel() {
         scope.launch {
-            isSttDownloading = true
-            outputText = "Downloading STT model..."
+            if (!stt.isModelDownloaded()) {
+                isSttDownloading = true
+                outputText = "Downloading STT model..."
 
-            try {
-                val downloadSuccess = stt.download()
-                if (downloadSuccess) {
-                    isSttDownloaded = true
-                    outputText = "STT Model downloaded successfully! Click \"Initialize\" to load it."
-                } else {
-                    outputText = "Failed to download STT model."
+                try {
+                    val downloadSuccess = stt.download()
+                    if (downloadSuccess) {
+                        isSttDownloaded = true
+                        outputText = "STT Model downloaded successfully! Click \"Initialize\" to load it."
+                    } else {
+                        outputText = "Failed to download STT model."
+                    }
+                } catch (e: Exception) {
+                    outputText = "Error downloading STT model: ${e.message}"
+                } finally {
+                    isSttDownloading = false
                 }
-            } catch (e: Exception) {
-                outputText = "Error downloading STT model: ${e.message}"
-            } finally {
-                isSttDownloading = false
+            } else {
+                isSttDownloaded = true
+                outputText = "STT Model already downloaded. Click \"Initialize\" to load it."
             }
         }
     }
@@ -185,7 +190,7 @@ fun App() {
     fun transcribe() {
         scope.launch {
             outputText = "Listening..."
-            val result = stt.transcribe()
+            val result = stt.transcribe(SpeechRecognitionParams())
             outputText = result?.text ?: "Transcription failed."
         }
     }
