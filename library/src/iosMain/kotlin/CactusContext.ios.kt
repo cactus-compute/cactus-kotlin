@@ -12,6 +12,20 @@ import platform.CoreCrypto.CC_SHA1
 import platform.CoreCrypto.CC_SHA1_DIGEST_LENGTH
 import platform.Foundation.NSBundle
 
+// Global variables for iOS callback handling
+private var currentStreamingCallback: CactusStreamingCallback? = null
+private var currentStreamingResponse: StringBuilder? = null
+
+// Static callback function for iOS FFI
+private val nativeTokenCallback = staticCFunction { token: CPointer<ByteVar>?, tokenId: UInt, userData: COpaquePointer? ->
+    token?.let { tokenPtr ->
+        val tokenString = tokenPtr.toKString()
+        currentStreamingResponse?.append(tokenString)
+        currentStreamingCallback?.invoke(tokenString, tokenId)
+    }
+    Unit
+}
+
 actual object CactusContext {
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -41,7 +55,8 @@ actual object CactusContext {
     actual suspend fun completion(
         handle: Long,
         messages: List<ChatMessage>,
-        params: CactusCompletionParams
+        params: CactusCompletionParams,
+        onToken: CactusStreamingCallback?
     ): CactusCompletionResult = withContext(Dispatchers.Default) {
 
         val messagesJson = buildString {
@@ -70,14 +85,33 @@ actual object CactusContext {
 
         return@withContext memScoped {
             val responseBuffer = allocArray<ByteVar>(params.bufferSize)
+            
+            // Set up streaming if callback is provided
+            val fullResponse = if (onToken != null) {
+                currentStreamingCallback = onToken
+                currentStreamingResponse = StringBuilder()
+                currentStreamingResponse
+            } else {
+                currentStreamingCallback = null
+                currentStreamingResponse = null
+                null
+            }
+
+            val callback = if (onToken != null) nativeTokenCallback else null
 
             val result = cactus_complete(
                 handle.toCPointer(),
                 messagesJson,
                 responseBuffer,
                 params.bufferSize.convert(),
-                optionsJson
+                optionsJson,
+                callback,
+                null
             )
+            
+            // Clean up global state
+            currentStreamingCallback = null
+            currentStreamingResponse = null
 
             if (result > 0) {
                 val responseText = responseBuffer.toKString()
@@ -85,7 +119,14 @@ actual object CactusContext {
                 try {
                     val jsonResponse = json.parseToJsonElement(responseText).jsonObject
                     val success = jsonResponse["success"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true
-                    val response = jsonResponse["response"]?.jsonPrimitive?.content ?: responseText
+                    
+                    // Use streaming response if we have it, otherwise use the response from buffer
+                    val response = if (onToken != null && fullResponse?.isNotEmpty() == true) {
+                        fullResponse.toString()
+                    } else {
+                        jsonResponse["response"]?.jsonPrimitive?.content ?: responseText
+                    }
+                    
                     val timeToFirstTokenMs = jsonResponse["time_to_first_token_ms"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 0.0
                     val totalTimeMs = jsonResponse["total_time_ms"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 0.0
                     val tokensPerSecond = jsonResponse["tokens_per_second"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 0.0
