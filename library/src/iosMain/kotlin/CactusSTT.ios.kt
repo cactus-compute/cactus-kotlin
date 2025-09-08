@@ -66,9 +66,9 @@ actual suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): B
     }
 }
 
-actual suspend fun performSTT(language: String, maxDuration: Int, sampleRate: Int): SpeechRecognitionResult? {
+actual suspend fun performSTT(params: SpeechRecognitionParams): SpeechRecognitionResult? {
     return try {
-        println("iOS performSTT called with language=$language, maxDuration=$maxDuration")
+        println("iOS performSTT called with language=$params")
 
         if (!isSpeechRecognitionAuthorized()) {
             println("Requesting speech permissions...")
@@ -83,6 +83,7 @@ actual suspend fun performSTT(language: String, maxDuration: Int, sampleRate: In
         if (!isSpeechRecognitionAvailable()) {
             println("Vosk model not loaded on this device")
             return SpeechRecognitionResult(
+                success = false,
                 text = "",
                 confidence = 0.0f,
                 isPartial = false
@@ -90,14 +91,9 @@ actual suspend fun performSTT(language: String, maxDuration: Int, sampleRate: In
         }
 
         println("Creating speech recognition params (on-device mode)...")
-        val params = SpeechRecognitionParams(
-            language = language,
-            enablePartialResults = false,
-            maxDuration = maxDuration
-        )
 
         println("Calling performSpeechRecognition...")
-        val speechResult = performSpeechRecognition(params, sampleRate)
+        val speechResult = performSpeechRecognition(params)
 
         println("performSpeechRecognition returned: $speechResult")
 

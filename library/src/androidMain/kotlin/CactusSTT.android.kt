@@ -49,6 +49,8 @@ actual suspend fun downloadSTTModel(model: String, modelName: String, spkModel: 
 
             true
         } catch (e: Exception) {
+            println("Error downloading STT model: ${e.message}")
+            e.printStackTrace()
             false
         }
     }
@@ -60,15 +62,10 @@ actual suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): B
     return result
 }
 
-actual suspend fun performSTT(language: String, maxDuration: Int, sampleRate: Int): SpeechRecognitionResult? {
-    println("CactusSTT.performSTT() called with language: $language, maxDuration: $maxDuration")
+actual suspend fun performSTT(params: SpeechRecognitionParams): SpeechRecognitionResult? {
+    println("CactusSTT.performSTT() called with $params")
     return try {
-        val params = SpeechRecognitionParams(
-            language = language,
-            enablePartialResults = false,
-            maxDuration = maxDuration
-        )
-        val speechResult = performSpeechRecognition(params, sampleRate)
+        val speechResult = performSpeechRecognition(params)
         println("CactusSTT.performSTT() got result: ${speechResult?.text}")
         speechResult
     } catch (e: Exception) {
@@ -98,5 +95,7 @@ private fun extractZip(zipFile: File, targetDir: File) {
             }
         }
     } catch (e: Exception) {
+        println("Error extracting zip file: ${e.message}")
+        e.printStackTrace()
     }
 }

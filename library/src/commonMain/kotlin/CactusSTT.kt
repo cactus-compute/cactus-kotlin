@@ -1,10 +1,8 @@
 package com.cactus
 
-class CactusSTT(
-    private val language: String = "en-US",
-    private val sampleRate: Int = 16000,
-    private val maxDuration: Int = 30
-) {
+import com.cactus.services.Telemetry
+
+class CactusSTT {
     private var isInitialized = false
     private var lastDownloadedModelName: String = "vosk-model-small-en-us-0.15"
     private var lastDownloadedSpkName: String = "vosk-model-spk-0.4"
@@ -63,5 +61,5 @@ class CactusSTT(
 
 expect suspend fun downloadSTTModel(model: String, modelName: String, spkModel: String, spkModelName: String): Boolean
 expect suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): Boolean
-expect suspend fun performSTT(language: String, maxDuration: Int, sampleRate: Int): SpeechRecognitionResult?
+expect suspend fun performSTT(params: SpeechRecognitionParams): SpeechRecognitionResult?
 expect fun stopSTT()

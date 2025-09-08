@@ -66,51 +66,57 @@ actual suspend fun requestSpeechPermissions(): Boolean {
     ) == PackageManager.PERMISSION_GRANTED
 }
 
-actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sampleRate: Int): SpeechRecognitionResult? =
+actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams): SpeechRecognitionResult? =
     suspendCancellableCoroutine { continuation ->
-
-        println("performSpeechRecognition called - isModelReady: $isModelReady, model: $model")
 
         if (!isModelReady || model == null) {
             println("Model not ready, returning setup message")
-            continuation.resume(SpeechRecognitionResult(
-                text = "Setting up offline speech recognition...",
-                confidence = 0.5f,
-                isPartial = false,
-                alternatives = emptyList()
-            ))
+            if (continuation.isActive) {
+                continuation.resume(SpeechRecognitionResult(
+                    success = false,
+                    text = "Setting up offline speech recognition...",
+                    confidence = 0.0f,
+                    isPartial = false,
+                    alternatives = emptyList()
+                ))
+            }
             return@suspendCancellableCoroutine
         }
 
         if (isListening) {
             println("Already listening, returning null")
-            continuation.resume(null)
+            if (continuation.isActive) {
+                continuation.resume(null)
+            }
             return@suspendCancellableCoroutine
         }
 
         if (ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             println("No microphone permission")
-            continuation.resume(SpeechRecognitionResult(
-                text = "Microphone permission required. Please grant RECORD_AUDIO permission in app settings.",
-                confidence = 0.0f,
-                isPartial = false,
-                alternatives = emptyList()
-            ))
+            if (continuation.isActive) {
+                continuation.resume(SpeechRecognitionResult(
+                    success = false,
+                    text = "Microphone permission required. Please grant RECORD_AUDIO permission in app settings.",
+                    confidence = 0.0f,
+                    isPartial = false,
+                    alternatives = emptyList()
+                ))
+            }
             return@suspendCancellableCoroutine
         }
 
         try {
             isListening = true
-            val recognizer = Recognizer(model, sampleRate.toFloat(), spkModel)
+            val recognizer = Recognizer(model, params.sampleRate.toFloat(), spkModel)
 
             val channelConfig = AudioFormat.CHANNEL_IN_MONO
             val audioFormat = AudioFormat.ENCODING_PCM_16BIT
-            val bufferSize = AudioRecord.getMinBufferSize(sampleRate, channelConfig, audioFormat)
+            val bufferSize = AudioRecord.getMinBufferSize(params.sampleRate, channelConfig, audioFormat)
 
             @SuppressLint("MissingPermission")
             audioRecord = AudioRecord(
                 MediaRecorder.AudioSource.MIC,
-                sampleRate,
+                params.sampleRate,
                 channelConfig,
                 audioFormat,
                 bufferSize
@@ -118,7 +124,9 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
 
             if (audioRecord?.state != AudioRecord.STATE_INITIALIZED) {
                 isListening = false
-                continuation.resume(null)
+                if (continuation.isActive) {
+                    continuation.resume(null)
+                }
                 return@suspendCancellableCoroutine
             }
 
@@ -128,12 +136,14 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
             var finalResult: String? = null
             var isRecording = true
 
-            continuation.invokeOnCancellation {
-                isRecording = false
-                audioRecord?.stop()
-                audioRecord?.release()
-                audioRecord = null
-                isListening = false
+            if (continuation.isActive) {
+                continuation.invokeOnCancellation {
+                    isRecording = false
+                    audioRecord?.stop()
+                    audioRecord?.release()
+                    audioRecord = null
+                    isListening = false
+                }
             }
 
             Thread {
@@ -142,14 +152,12 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
                     var lastPartialResult = ""
                     var silenceStartTime = 0L
                     var lastSpeechTime = System.currentTimeMillis()
-                    val maxSilenceDuration = 1000L
-                    val maxRecordingDuration = 30000L
                     val recordingStartTime = System.currentTimeMillis()
 
                     while (isRecording && audioRecord?.recordingState == AudioRecord.RECORDSTATE_RECORDING) {
                         val currentTime = System.currentTimeMillis()
 
-                        if (currentTime - recordingStartTime > maxRecordingDuration) {
+                        if (currentTime - recordingStartTime > params.maxDuration) {
                             isRecording = false
                             break
                         }
@@ -206,7 +214,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
                                 if (finalResult != null || lastPartialResult.isNotEmpty()) {
                                     if (silenceStartTime == 0L) {
                                         silenceStartTime = currentTime
-                                    } else if (currentTime - silenceStartTime > maxSilenceDuration) {
+                                    } else if (currentTime - silenceStartTime > params.maxSilenceDuration) {
                                         isRecording = false
                                         break
                                     }
@@ -232,31 +240,43 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
                     audioRecord = null
                     isListening = false
 
+                    val endTime = System.currentTimeMillis()
+                    val responseTimeMs = (endTime - recordingStartTime).toDouble()
+
                     val result = if (!finalResult.isNullOrEmpty()) {
                         SpeechRecognitionResult(
+                            success = true,
                             text = finalResult,
                             confidence = 0.9f,
                             isPartial = false,
-                            alternatives = emptyList()
+                            alternatives = emptyList(),
+                            responseTime = responseTimeMs
                         )
                     } else {
                         null
                     }
 
-                    continuation.resume(result)
+                    if (continuation.isActive) {
+                        continuation.resume(result)
+                    }
 
                 } catch (e: Exception) {
                     audioRecord?.stop()
                     audioRecord?.release()
                     audioRecord = null
                     isListening = false
-                    continuation.resume(null)
+                    if (continuation.isActive) {
+                        continuation.resume(null)
+                    }
                 }
             }.start()
 
         } catch (e: Exception) {
+            println("Failed to start Vosk speech recognition: $e")
             isListening = false
-            continuation.resume(null)
+            if (continuation.isActive) {
+                continuation.resume(null)
+            }
         }
     }
 

@@ -46,19 +46,18 @@ data class CactusModel(
 )
 
 data class SpeechRecognitionParams(
-    val language: String = "en-US",
-    val continuous: Boolean = false,
-    val maxDuration: Int = 30,
-    val enablePartialResults: Boolean = true,
-    val enableProfanityFilter: Boolean = true,
-    val enablePunctuation: Boolean = true
+    val maxSilenceDuration: Long = 1000L,
+    val maxDuration: Long = 30000L,
+    val sampleRate: Int = 16000,
 )
 
 data class SpeechRecognitionResult(
+    val success: Boolean,
     val text: String,
     val confidence: Float,
     val isPartial: Boolean = false,
-    val alternatives: List<String> = emptyList()
+    val alternatives: List<String> = emptyList(),
+    val responseTime: Double? = null
 )
 
 sealed class SpeechError : Exception() {

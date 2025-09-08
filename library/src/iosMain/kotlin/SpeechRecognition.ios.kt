@@ -95,15 +95,16 @@ actual suspend fun requestSpeechPermissions(): Boolean = suspendCancellableCorou
 }
 
 @OptIn(ExperimentalForeignApi::class)
-actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sampleRate: Int): SpeechRecognitionResult? =
+actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams): SpeechRecognitionResult? =
     suspendCancellableCoroutine { continuation ->
 
         if (!isModelReady || model == null) {
             println("Model not ready, returning setup message")
             if (continuation.isActive) {
                 continuation.resume(SpeechRecognitionResult(
+                    success = false,
                     text = "Setting up offline speech recognition...",
-                    confidence = 0.5f,
+                    confidence = 0.0f,
                     isPartial = false,
                     alternatives = emptyList()
                 ))
@@ -123,6 +124,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
             println("No microphone permission")
             if (continuation.isActive) {
                 continuation.resume(SpeechRecognitionResult(
+                    success = false,
                     text = "Microphone permission required. Please grant RECORD_AUDIO permission in app settings.",
                     confidence = 0.0f,
                     isPartial = false,
@@ -134,7 +136,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
 
         try {
             isListening = true
-            voskRecognizer = vosk_recognizer_new_spk(model, sampleRate.toFloat(), spkModel)
+            voskRecognizer = vosk_recognizer_new_spk(model, params.sampleRate.toFloat(), spkModel)
 
             if (voskRecognizer == null) {
                 isListening = false
@@ -151,8 +153,6 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
             var lastPartialResult = ""
             var silenceStartTime = 0L
             var lastSpeechTime = (NSDate.timeIntervalSinceReferenceDate * 1000).toLong()
-            val maxSilenceDuration = 1000L
-            val maxRecordingDuration = 30000L
             val recordingStartTime = (NSDate.timeIntervalSinceReferenceDate * 1000).toLong()
 
             val hasResumed = atomic(false)
@@ -189,12 +189,17 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
                 }
                 isListening = false
 
+                val endTime = (NSDate.timeIntervalSinceReferenceDate * 1000).toLong()
+                val responseTimeMs = (endTime - recordingStartTime).toDouble()
+
                 val result = if (!resultText.isNullOrEmpty()) {
                     SpeechRecognitionResult(
+                        success = true,
                         text = resultText!!,
                         confidence = 0.9f,
                         isPartial = false,
-                        alternatives = emptyList()
+                        alternatives = emptyList(),
+                        responseTime = responseTimeMs
                     )
                 } else {
                     null
@@ -220,7 +225,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
 
                 val currentTime = (NSDate.timeIntervalSinceReferenceDate * 1000).toLong()
 
-                if (currentTime - recordingStartTime > maxRecordingDuration) {
+                if (currentTime - recordingStartTime > params.maxDuration) {
                     stopCurrentRecognition?.invoke()
                     return@installTapOnBus
                 }
@@ -237,7 +242,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
                     }
                     audioLevel /= frameLength
                     val hasVoiceActivity = audioLevel > 0.015
-                    val downsampleRatio = (recordingFormat.sampleRate / sampleRate).toInt()
+                    val downsampleRatio = (recordingFormat.sampleRate / params.sampleRate).toInt()
                     val outputSamples = frameLength / downsampleRatio
                     if (outputSamples == 0) return@let
                     val pcmBytes = ByteArray(outputSamples * 2)
@@ -288,7 +293,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
                         if (finalResultText != null || lastPartialResult.isNotEmpty()) {
                             if (silenceStartTime == 0L) {
                                 silenceStartTime = currentTime
-                            } else if (currentTime - silenceStartTime > maxSilenceDuration) {
+                            } else if (currentTime - silenceStartTime > params.maxSilenceDuration) {
                                 stopCurrentRecognition?.invoke()
                             }
                         }
@@ -298,7 +303,6 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, sam
 
             audioEngine!!.prepare()
             audioEngine!!.startAndReturnError(null)
-            println("🎙️ Started Vosk listening...")
 
         } catch (e: Exception) {
             println("Failed to start Vosk speech recognition: $e")
