@@ -73,7 +73,7 @@ class Telemetry private constructor(
             tps = result?.tokensPerSecond,
             responseTime = result?.totalTimeMs,
             model = options.model,
-            tokens = result?.totalTokens?.toDouble(),
+            tokens = result?.totalTokens,
             success = result?.success,
             message = message,
             telemetryToken = cactusTelemetryToken

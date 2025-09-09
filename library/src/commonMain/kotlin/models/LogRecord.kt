@@ -14,7 +14,7 @@ data class LogRecord(
     val tps: Double? = null,
     @SerialName("response_time") val responseTime: Double? = null,
     val model: String? = null,
-    val tokens: Double? = null,
+    val tokens: Int? = null,
     @SerialName("framework") val framework: String = "kotlin",
     @SerialName("framework_version") val frameworkVersion: String = BuildConfig.FRAMEWORK_VERSION,
     val success: Boolean? = null,
