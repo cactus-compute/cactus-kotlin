@@ -39,9 +39,10 @@ class CactusSTT {
             }
             isInitialized = initializeSTT(currentModel.file_name, spkModelFolder)
             if (Telemetry.isInitialized) {
+                val message = if (isInitialized) null else "Failed to initialize model: ${currentModel.file_name}"
                 Telemetry.instance?.logInit(isInitialized, CactusInitParams(
                     model = model
-                ))
+                ), message)
             }
         } catch (e: Exception) {
             println("Error initializing STT: ${e.message}")

@@ -47,14 +47,15 @@ class Telemetry private constructor(
         }
     }
 
-    suspend fun logInit(success: Boolean, options: CactusInitParams) {
+    suspend fun logInit(success: Boolean, options: CactusInitParams, message: String? = null) {
         val record = LogRecord(
             eventType = "init",
             projectId = projectId,
             deviceId = deviceId,
             model = options.model,
             success = success,
-            telemetryToken = cactusTelemetryToken
+            telemetryToken = cactusTelemetryToken,
+            message = message
         )
 
         Supabase.sendLogRecord(record)

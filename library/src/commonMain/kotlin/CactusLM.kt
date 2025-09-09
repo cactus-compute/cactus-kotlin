@@ -31,7 +31,8 @@ class CactusLM {
         _lastDownloadedModel = modelFolder
         if (Telemetry.isInitialized) {
             val updatedParams = params.copy(model = modelFolder)
-            Telemetry.instance?.logInit(_handle != null, updatedParams)
+            val message = if (_handle != null) null else "Failed to initialize model at path: $modelPath"
+            Telemetry.instance?.logInit(_handle != null, updatedParams, message)
         }
         return _handle != null
     }
