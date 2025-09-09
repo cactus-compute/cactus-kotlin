@@ -62,10 +62,10 @@ actual suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): B
     return result
 }
 
-actual suspend fun performSTT(params: SpeechRecognitionParams): SpeechRecognitionResult? {
+actual suspend fun performSTT(params: SpeechRecognitionParams, filePath: String?): SpeechRecognitionResult? {
     println("CactusSTT.performSTT() called with $params")
     return try {
-        val speechResult = performSpeechRecognition(params)
+        val speechResult = performSpeechRecognition(params, filePath)
         println("CactusSTT.performSTT() got result: ${speechResult?.text}")
         speechResult
     } catch (e: Exception) {

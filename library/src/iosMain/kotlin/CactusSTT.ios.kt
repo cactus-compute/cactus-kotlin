@@ -52,7 +52,7 @@ actual suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): B
     }
 }
 
-actual suspend fun performSTT(params: SpeechRecognitionParams): SpeechRecognitionResult? {
+actual suspend fun performSTT(params: SpeechRecognitionParams, filePath: String?): SpeechRecognitionResult? {
     return try {
         println("iOS performSTT called with language=$params")
 
@@ -76,7 +76,7 @@ actual suspend fun performSTT(params: SpeechRecognitionParams): SpeechRecognitio
         println("Creating speech recognition params (on-device mode)...")
 
         println("Calling performSpeechRecognition...")
-        val speechResult = performSpeechRecognition(params)
+        val speechResult = performSpeechRecognition(params, filePath)
 
         println("performSpeechRecognition returned: $speechResult")
 

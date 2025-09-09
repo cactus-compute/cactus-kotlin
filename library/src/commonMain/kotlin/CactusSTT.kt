@@ -51,14 +51,14 @@ class CactusSTT {
         return isInitialized
     }
 
-    suspend fun transcribe(params: SpeechRecognitionParams): SpeechRecognitionResult? {
+    suspend fun transcribe(params: SpeechRecognitionParams, filePath: String? = null): SpeechRecognitionResult? {
         if (isInitialized) {
             val currentModel = getModel(lastDownloadedModelName) ?: run {
                 println("No data found for model: $lastDownloadedModelName")
                 return null
             }
             val startTime = timeSource.markNow()
-            val result = performSTT(params)
+            val result = performSTT(params, filePath)
             if (Telemetry.isInitialized) {
                 Telemetry.instance?.logTranscription(
                     CactusCompletionResult(
@@ -112,6 +112,6 @@ class CactusSTT {
 
 expect suspend fun downloadSTTModel(modelUrl: String, modelName: String, spkModelUrl: String, spkModelName: String): Boolean
 expect suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): Boolean
-expect suspend fun performSTT(params: SpeechRecognitionParams): SpeechRecognitionResult?
+expect suspend fun performSTT(params: SpeechRecognitionParams, filePath: String?): SpeechRecognitionResult?
 expect fun stopSTT()
 expect suspend fun modelExists(modelName: String): Boolean
