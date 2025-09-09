@@ -155,6 +155,7 @@ fun App() {
         scope.launch {
             isInitializing = true
             outputText = "Generating response..."
+            var firstToken = true
 
             try {
                 val resp = lm.generateCompletion(
@@ -162,7 +163,14 @@ fun App() {
                     params = CactusCompletionParams(
                         maxTokens = 50,
                         temperature = 0.7
-                    )
+                    ),
+                    onToken = { token, tokenId ->
+                        if(firstToken) {
+                            lastResponse = ""
+                            firstToken = false
+                        }
+                        lastResponse += token
+                    }
                 )
 
                 if (resp != null && resp.success) {
