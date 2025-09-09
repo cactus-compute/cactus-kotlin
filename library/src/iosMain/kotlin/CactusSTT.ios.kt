@@ -1,15 +1,10 @@
 package com.cactus
 
+import utils.IOSFileUtils
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import platform.Foundation.*
-import okio.Path.Companion.toPath
-import okio.Path
-import okio.FileSystem
-import okio.buffer
-import okio.use
-import okio.openZip
 
 @OptIn(ExperimentalForeignApi::class)
 actual suspend fun downloadSTTModel(
@@ -19,32 +14,23 @@ actual suspend fun downloadSTTModel(
     spkModelName: String
 ): Boolean = withContext(Dispatchers.Default) {
     try {
-        // Prefer Caches directory to mirror Android's cacheDir
-        val cachesDir = NSSearchPathForDirectoriesInDomains(
-            NSCachesDirectory, NSUserDomainMask, true
-        ).firstOrNull() as? String ?: return@withContext false
-
+        val cachesDir = IOSFileUtils.getCachesDirectory() ?: return@withContext false
         val modelsDir = "$cachesDir/models/vosk"
-        NSFileManager.defaultManager.createDirectoryAtPath(
-            modelsDir, true, null, null
-        )
+        IOSFileUtils.createDirectoryIfNeeded(modelsDir)
 
-        // Download main model
-        val modelOk = ensureFilePresentOrDownloadedAndUnzipped(
+        val modelOk = IOSFileUtils.ensureFilePresentOrDownloadedAndUnzipped(
             urlString = modelUrl,
             fileName = modelName,
             baseDir = modelsDir
         )
         if (!modelOk) return@withContext false
 
-        // Download speaker model
-        val spkOk = ensureFilePresentOrDownloadedAndUnzipped(
+        val spkOk = IOSFileUtils.ensureFilePresentOrDownloadedAndUnzipped(
             urlString = spkModelUrl,
             fileName = spkModelName,
             baseDir = modelsDir
         )
         if (!spkOk) return@withContext false
-
         true
     } catch (_: Throwable) {
         false
@@ -115,15 +101,11 @@ actual fun stopSTT() {
 actual suspend fun modelExists(modelName: String): Boolean = withContext(Dispatchers.Default) {
     try {
         // Use the same directory as download function
-        val cachesDir = NSSearchPathForDirectoriesInDomains(
-            NSCachesDirectory, NSUserDomainMask, true
-        ).firstOrNull() as? String ?: return@withContext false
+        val cachesDir = IOSFileUtils.getCachesDirectory() ?: return@withContext false
 
         val modelsDir = "$cachesDir/models/vosk"
-        val fm = NSFileManager.defaultManager
-
         val modelPath = "$modelsDir/$modelName"
-        val modelExists = fm.fileExistsAtPath(modelPath)
+        val modelExists = IOSFileUtils.fileExists(modelPath)
 
         println("Checking models - Main model ($modelName): $modelExists")
         
@@ -131,70 +113,5 @@ actual suspend fun modelExists(modelName: String): Boolean = withContext(Dispatc
     } catch (e: Exception) {
         println("Error checking downloaded models: $e")
         false
-    }
-}
-
-@OptIn(ExperimentalForeignApi::class)
-private fun ensureFilePresentOrDownloadedAndUnzipped(
-    urlString: String,
-    fileName: String,
-    baseDir: String
-): Boolean {
-    val fm = NSFileManager.defaultManager
-
-    val path = "$baseDir/$fileName"
-    if (fm.fileExistsAtPath(path)) return true
-
-    if (fileName.endsWith(".zip", ignoreCase = true)) {
-        val unzippedGuess = path.removeSuffix(".zip")
-        if (fm.fileExistsAtPath(unzippedGuess)) return true
-    }
-
-    val nsUrl = NSURL(string = urlString)
-    val data: NSData = NSData.dataWithContentsOfURL(nsUrl) ?: return false
-    data.writeToFile(path, true)
-
-    if (fileName.endsWith(".zip", ignoreCase = true)) {
-        val targetDir = baseDir
-        val unzipOk = extractZip(zipFilePath = path.toPath(), outputDir = targetDir.toPath())
-        // If unzip succeeded, delete the archive to match Android behavior
-        if (unzipOk) {
-            runCatching { fm.removeItemAtPath(path, null) }
-        }
-        return unzipOk
-    }
-
-    return true
-}
-
-fun extractZip(zipFilePath: Path, outputDir: Path) : Boolean {
-    return try {
-        val zipFileSystem = FileSystem.SYSTEM.openZip(zipFilePath)
-        val fileSystem = FileSystem.SYSTEM
-        val paths = zipFileSystem.listRecursively("/".toPath())
-            .filter { zipFileSystem.metadata(it).isRegularFile }
-            .toList()
-
-        paths.forEach { zipFilePath ->
-            zipFileSystem.source(zipFilePath).buffer().use { source ->
-                val relativeFilePath = zipFilePath.toString().trimStart('/')
-                val fileToWrite = outputDir.resolve(relativeFilePath)
-                fileToWrite.createParentDirectories()
-                fileSystem.sink(fileToWrite).buffer().use { sink ->
-                    val bytes = sink.writeAll(source)
-                    println("Unzipped: $relativeFilePath to $fileToWrite; $bytes bytes written")
-                }
-            }
-        }
-        true
-    } catch (e: Exception) {
-        println("Error unzipping $zipFilePath to $outputDir: $e")
-        false
-    }
-}
-
-fun Path.createParentDirectories() {
-    this.parent?.let { parent ->
-        FileSystem.SYSTEM.createDirectories(parent)
     }
 }
