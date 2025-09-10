@@ -11,6 +11,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.cactus.*
+import com.cactus.models.ToolParameter
+import com.cactus.models.createTool
 import com.cactus.services.CactusTelemetry
 import kotlinx.coroutines.launch
 
@@ -159,10 +161,19 @@ fun App() {
 
             try {
                 val resp = lm.generateCompletion(
-                    messages = listOf(ChatMessage("Tell me a joke about computers.", "user")),
+                    messages = listOf(ChatMessage("What's the weather in New York?", "user")),
                     params = CactusCompletionParams(
                         maxTokens = 50,
                         temperature = 0.7
+                    ),
+                    tools = listOf(
+                        createTool(
+                            name = "get_weather",
+                            description = "Get weather for a location",
+                            parameters = mapOf(
+                                "location" to ToolParameter("string", "City name", true)
+                            )
+                        )
                     ),
                     onToken = { token, tokenId ->
                         if(firstToken) {
