@@ -1,5 +1,7 @@
 package com.cactus
 
+import com.cactus.models.Tool
+import com.cactus.models.toToolsJson
 import com.cactus.services.Supabase
 import com.cactus.services.Telemetry
 
@@ -40,6 +42,7 @@ class CactusLM {
     suspend fun generateCompletion(
         messages: List<ChatMessage>,
         params: CactusCompletionParams,
+        tools: List<Tool>? = null,
         onToken: CactusStreamingCallback? = null
     ): CactusCompletionResult? {
         val currentHandle = _handle
@@ -55,8 +58,10 @@ class CactusLM {
         }
 
         try {
-            val result = CactusContext.completion(currentHandle, messages, params, onToken)
-            
+            val toolsJson = tools?.toToolsJson()
+
+            val result = CactusContext.completion(currentHandle, messages, params, toolsJson, onToken)
+
             // Track telemetry for successful completions (if telemetry is initialized)
             if (result.success && Telemetry.isInitialized) {
                 val initParams = CactusInitParams(

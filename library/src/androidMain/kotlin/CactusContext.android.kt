@@ -55,6 +55,7 @@ actual object CactusContext {
         handle: Long, 
         messages: List<ChatMessage>,
         params: CactusCompletionParams,
+        tools: String?,
         onToken: CactusStreamingCallback?
     ): CactusCompletionResult = withContext(Dispatchers.Default) {
         val messagesJson = buildString {
@@ -108,6 +109,7 @@ actual object CactusContext {
             responseBuffer,
             params.bufferSize,
             optionsJson,
+            tools,
             callback,
             0L // userData - not used in our implementation
         )

@@ -9,6 +9,7 @@ expect object CactusContext {
         handle: Long,
         messages: List<ChatMessage>,
         params: CactusCompletionParams,
+        tools: String? = null,
         onToken: CactusStreamingCallback? = null
     ): CactusCompletionResult
 }

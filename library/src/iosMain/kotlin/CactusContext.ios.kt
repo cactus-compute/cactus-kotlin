@@ -56,6 +56,7 @@ actual object CactusContext {
         handle: Long,
         messages: List<ChatMessage>,
         params: CactusCompletionParams,
+        tools: String?,
         onToken: CactusStreamingCallback?
     ): CactusCompletionResult = withContext(Dispatchers.Default) {
 

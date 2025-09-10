@@ -64,9 +64,10 @@ Java_com_cactus_CactusLibrary_cactus_1init(JNIEnv *env, jclass clazz, jstring mo
 JNIEXPORT jint JNICALL
 Java_com_cactus_CactusLibrary_cactus_1complete(JNIEnv *env, jclass clazz, jlong model,
                                                 jstring messages_json, jbyteArray response_buffer,
-                                                jint buffer_size, jstring options_json, jobject callback, jlong user_data) {
+                                                jint buffer_size, jstring options_json, jstring tools_json, jobject callback, jlong user_data) {
     const char *messages = env->GetStringUTFChars(messages_json, 0);
     const char *options = options_json ? env->GetStringUTFChars(options_json, 0) : nullptr;
+    const char *tools = tools_json ? env->GetStringUTFChars(tools_json, 0) : nullptr;
     
     jbyte *buffer = env->GetByteArrayElements(response_buffer, 0);
     
@@ -93,7 +94,7 @@ Java_com_cactus_CactusLibrary_cactus_1complete(JNIEnv *env, jclass clazz, jlong 
     
     int result = cactus_complete(reinterpret_cast<cactus_model_t>(model), messages,
                                 reinterpret_cast<char*>(buffer), buffer_size, options,
-                                native_callback, native_user_data);
+                                tools, native_callback, native_user_data);
     
     // Clean up global reference if we created one
     if (callback_data.callback != nullptr) {
@@ -103,6 +104,7 @@ Java_com_cactus_CactusLibrary_cactus_1complete(JNIEnv *env, jclass clazz, jlong 
     env->ReleaseByteArrayElements(response_buffer, buffer, 0);
     env->ReleaseStringUTFChars(messages_json, messages);
     if (options) env->ReleaseStringUTFChars(options_json, options);
+    if (tools) env->ReleaseStringUTFChars(tools_json, tools);
     
     return result;
 }

@@ -13,6 +13,7 @@ internal object CactusLibrary {
         responseBuffer: ByteArray,
         bufferSize: Int,
         optionsJson: String?,
+        tools: String?,
         callback: ((String, Int) -> Unit)?,
         userData: Long
     ): Int
