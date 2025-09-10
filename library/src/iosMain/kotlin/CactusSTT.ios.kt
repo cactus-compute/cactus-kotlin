@@ -89,7 +89,10 @@ actual suspend fun performSTT(params: SpeechRecognitionParams, filePath: String?
     } catch (e: Exception) {
         println("STT error: $e")
         e.printStackTrace()
-        null
+        SpeechRecognitionResult(
+            success = false,
+            text = "Error during speech recognition: ${e.message}"
+        )
     }
 }
 

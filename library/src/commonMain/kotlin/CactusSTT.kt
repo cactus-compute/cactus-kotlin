@@ -47,6 +47,11 @@ class CactusSTT {
         } catch (e: Exception) {
             println("Error initializing STT: ${e.message}")
             e.printStackTrace()
+            if (Telemetry.isInitialized) {
+                Telemetry.instance?.logInit(isInitialized, CactusInitParams(
+                    model = model
+                ), "Error in initializing STT: ${e.message}")
+            }
         }
         return isInitialized
     }
