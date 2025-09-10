@@ -36,7 +36,6 @@ kotlin {
     }
 
     listOf(
-        iosX64(),
         iosArm64(),
         iosSimulatorArm64()
     ).forEach { iosTarget ->
@@ -58,7 +57,6 @@ kotlin {
 
                     val archPath = when (iosTarget.name) {
                         "iosArm64" -> "ios-arm64"
-                        "iosX64" -> "ios-arm64-simulator"
                         "iosSimulatorArm64" -> "ios-arm64-simulator"
                         else -> "ios-arm64"
                     }
@@ -81,7 +79,6 @@ kotlin {
 
                     val archPath = when (iosTarget.name) {
                         "iosArm64" -> "ios-arm64"
-                        "iosX64" -> "ios-arm64-simulator"
                         "iosSimulatorArm64" -> "ios-arm64-simulator"
                         else -> "ios-arm64"
                     }
@@ -104,7 +101,6 @@ kotlin {
 
                     val voskArchPath = when (iosTarget.name) {
                         "iosArm64" -> "ios-arm64_armv7_armv7s"
-                        "iosX64" -> "ios-arm64_x86_64-simulator"
                         "iosSimulatorArm64" -> "ios-arm64_x86_64-simulator"
                         else -> "ios-arm64_armv7_armv7s"
                     }
