@@ -1,5 +1,12 @@
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
+
+val properties = Properties()
+val localPropertiesFile = project.rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    properties.load(localPropertiesFile.inputStream())
+}
 
 plugins {
     alias(libs.plugins.buildconfig)
@@ -185,6 +192,16 @@ android {
 }
 
 publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/cactus-compute/cactus-kotlin")
+            credentials {
+                username = properties.getProperty("github.username") ?: System.getenv("GITHUB_ACTOR")
+                password = properties.getProperty("github.token") ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
     publications {
         withType<MavenPublication> {
             pom {
