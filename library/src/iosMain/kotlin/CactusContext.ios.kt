@@ -106,6 +106,7 @@ actual object CactusContext {
                 responseBuffer,
                 params.bufferSize.convert(),
                 optionsJson,
+                tools,
                 callback,
                 null
             )
