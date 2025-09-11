@@ -152,6 +152,51 @@ You can download various models by their slug identifier:
 - `CactusCompletionParams(temperature: Double, topK: Int, topP: Double, maxTokens: Int, stopSequences: List<String>, bufferSize: Int)` - Completion parameters
 - `ChatMessage(content: String, role: String, timestamp: Long?)` - Chat message format
 - `CactusCompletionResult` - Contains response, timing metrics, and success status
+- `CactusEmbeddingResult(success: Boolean, embeddings: List<Double>, dimension: Int, errorMessage: String?)` - Embedding generation result
+
+## Embeddings
+
+The `CactusLM` class also provides text embedding generation capabilities for semantic similarity, search, and other NLP tasks.
+
+### Basic Usage
+```kotlin
+import com.cactus.CactusLM
+import com.cactus.CactusInitParams
+import kotlinx.coroutines.runBlocking
+
+runBlocking {
+    val lm = CactusLM()
+
+    // Download and initialize a model (same as for completions)
+    lm.downloadModel("qwen3-0.6")
+    lm.initializeModel(CactusInitParams(model = "qwen3-0.6", contextSize = 2048))
+
+    // Generate embeddings for a text
+    val result = lm.generateEmbedding(
+        text = "This is a sample text for embedding generation",
+        bufferSize = 2048
+    )
+
+    result?.let { embedding ->
+        if (embedding.success) {
+            println("Embedding dimension: ${embedding.dimension}")
+            println("Embedding vector length: ${embedding.embeddings.size}")
+        } else {
+            println("Embedding generation failed: ${embedding.errorMessage}")
+        }
+    }
+
+    lm.unload()
+}
+```
+
+### Embedding API Reference
+
+#### CactusLM Class (Embedding Methods)
+- `suspend fun generateEmbedding(text: String, bufferSize: Int = 2048): CactusEmbeddingResult?` - Generate text embeddings
+
+#### Embedding Data Classes
+- `CactusEmbeddingResult(success: Boolean, embeddings: List<Double>, dimension: Int, errorMessage: String?)` - Contains the generated embedding vector and metadata
 
 ## Speech-to-Text (STT)
 
