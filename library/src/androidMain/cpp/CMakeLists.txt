@@ -28,6 +28,8 @@ target_compile_options(cactus PRIVATE
     -ffunction-sections
 )
 
+target_link_options(cactus PRIVATE -Wl,-z,max-page-size=16384)
+
 # Link libraries for main cactus and util
 target_link_libraries(cactus
     cactus_static
