@@ -206,6 +206,40 @@ fun App() {
         }
     }
 
+    fun generateEmbeddings() {
+        if (!isModelLoaded) {
+            outputText = "Please download and initialize model first."
+            return
+        }
+
+        scope.launch {
+            isInitializing = true
+            outputText = "Generating Embedding..."
+            try {
+                val resp = lm.generateEmbedding(
+                    text = "What's the weather in New York?"
+                )
+
+                if (resp != null && resp.success) {
+                    lastResponse = "Dimensions: ${resp.dimension} \nLength: ${resp.embeddings.size} \nEmbeddings: [${resp.embeddings.take(5).joinToString(", ")}...]"
+                    outputText = "Generation completed successfully!"
+                } else {
+                    outputText = "Failed to generate embedding."
+                    lastResponse = null
+                    lastTPS = null
+                    lastTTFT = null
+                }
+            } catch (e: Exception) {
+                outputText = "Error generating embedding: ${e.message}"
+                lastResponse = null
+                lastTPS = null
+                lastTTFT = null
+            } finally {
+                isInitializing = false
+            }
+        }
+    }
+
     fun transcribe() {
         scope.launch {
             outputText = "Listening..."
@@ -268,6 +302,13 @@ fun App() {
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Text("Generate Completion")
+                        }
+                        Button(
+                            onClick = { generateEmbeddings() },
+                            enabled = isModelLoaded && !isInitializing,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text("Generate Embeddings")
                         }
                     }
                 }
