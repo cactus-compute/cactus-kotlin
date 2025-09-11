@@ -66,10 +66,17 @@ object IOSFileUtils {
                 .filter { zipFileSystem.metadata(it).isRegularFile }
                 .toList()
 
-
             paths.forEach { zipEntryPath ->
                 zipFileSystem.source(zipEntryPath).buffer().use { source ->
-                    val relativeFilePath = zipEntryPath.toString().trimStart('/')
+                    val fullPath = zipEntryPath.toString().trimStart('/')
+                    
+                    // Strip the first directory level if it exists (removes the top-level folder from zip)
+                    val relativeFilePath = if (fullPath.contains('/')) {
+                        fullPath.substringAfter('/')
+                    } else {
+                        fullPath
+                    }
+                    
                     val fileToWrite = outputDir.resolve(relativeFilePath)
                     fileToWrite.createParentDirectories()
                     fileSystem.sink(fileToWrite).buffer().use { sink ->
