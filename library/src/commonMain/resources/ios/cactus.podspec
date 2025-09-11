@@ -8,8 +8,6 @@ Pod::Spec.new do |spec|
   spec.author        = { "Cactus" => "contact@cactus.ai" }
   spec.ios.deployment_target = "13.0"
   spec.swift_version = "5.0"
-  spec.vendored_frameworks = "libvosk.xcframework"
   spec.frameworks = "Accelerate", "Foundation", "Metal", "MetalKit"
   spec.source = { :path => "." }
-  spec.preserve_paths = "libvosk.xcframework"
  end

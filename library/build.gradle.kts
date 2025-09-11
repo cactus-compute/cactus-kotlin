@@ -99,24 +99,22 @@ kotlin {
                 }
 
                 val vosk by creating {
-                    defFile(project.file("src/commonMain/resources/cinterop/vosk.def"))
+                    defFile(project.file("src/iosMain/cinterop/vosk.def"))
                     packageName("com.vosk.native")
 
-                    val voskArchPath = when (iosTarget.name) {
-                        "iosArm64" -> "ios-arm64_armv7_armv7s"
-                        "iosX64" -> "ios-arm64_x86_64-simulator"
-                        "iosSimulatorArm64" -> "ios-arm64_x86_64-simulator"
-                        else -> "ios-arm64_armv7_armv7s"
+                    val archPath = when (iosTarget.name) {
+                        "iosArm64" -> "ios-arm64"
+                        "iosX64" -> "ios-arm64-simulator"
+                        "iosSimulatorArm64" -> "ios-arm64-simulator"
+                        else -> "ios-arm64"
                     }
 
-                    val voskLibPath = project.file("src/commonMain/resources/ios/libvosk.xcframework/$voskArchPath")
-                    val voskHeaderPath = project.file("src/commonMain/resources/cinterop")
-
-                    includeDirs(voskHeaderPath)
-                    compilerOpts("-I", voskHeaderPath.absolutePath)
-
-                    // Link the static library
-                    extraOpts("-libraryPath", voskLibPath.absolutePath)
+                    val headerPath = project.file("src/commonMain/resources/ios/include")
+                    val libraryPath = project.file("src/commonMain/resources/ios/lib/$archPath")
+                    
+                    includeDirs(headerPath)
+                    compilerOpts("-L${libraryPath.absolutePath}", "-lvosk")
+                    extraOpts("-libraryPath", libraryPath.absolutePath)
                 }
             }
         }
