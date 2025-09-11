@@ -17,5 +17,12 @@ internal object CactusLibrary {
         callback: ((String, Int) -> Unit)?,
         userData: Long
     ): Int
+    external fun cactus_embed(
+        model: Long,
+        text: String,
+        embeddingsBuffer: FloatArray,
+        bufferSize: Int,
+        embeddingDimPtr: IntArray
+    ): Int
     external fun cactus_destroy(model: Long)
 }

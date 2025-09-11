@@ -83,6 +83,37 @@ class CactusLM {
         }
     }
 
+    suspend fun generateEmbedding(
+        text: String,
+        bufferSize: Int = 2048
+    ): CactusEmbeddingResult? {
+        val currentHandle = _handle
+        if (currentHandle == null) {
+            println("CactusLM: Context not initialized")
+            return null
+        }
+
+        try {
+            println("CactusLM: Generating embedding for text: ${if (text.length > 50) text.substring(0, 50) + "..." else text}")
+            
+            val result = CactusContext.generateEmbedding(currentHandle, text, bufferSize)
+            
+            println("CactusLM: Embedding generation ${if (result.success) "completed successfully" else "failed"}: " +
+                    "dimension=${result.dimension}, " +
+                    "embeddings_length=${result.embeddings.size}")
+            
+            return result
+        } catch (e: Exception) {
+            println("CactusLM: Exception during embedding generation: $e")
+            return CactusEmbeddingResult(
+                success = false,
+                embeddings = emptyList(),
+                dimension = 0,
+                errorMessage = e.message
+            )
+        }
+    }
+
     fun unload() {
         val currentHandle = _handle
         if (currentHandle != null) {

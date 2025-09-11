@@ -27,6 +27,13 @@ data class CactusCompletionResult(
     val totalTokens: Int? = null
 )
 
+data class CactusEmbeddingResult(
+    val success: Boolean,
+    val embeddings: List<Double>,
+    val dimension: Int,
+    val errorMessage: String? = null
+)
+
 data class ChatMessage(
     val content: String,
     val role: String,

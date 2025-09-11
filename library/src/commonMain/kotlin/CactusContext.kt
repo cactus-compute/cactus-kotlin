@@ -12,4 +12,9 @@ expect object CactusContext {
         tools: String? = null,
         onToken: CactusStreamingCallback? = null
     ): CactusCompletionResult
+    suspend fun generateEmbedding(
+        handle: Long,
+        text: String,
+        bufferSize: Int = 2048
+    ): CactusEmbeddingResult
 }

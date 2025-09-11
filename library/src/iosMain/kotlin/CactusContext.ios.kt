@@ -173,6 +173,67 @@ actual object CactusContext {
         }
     }
 
+    actual suspend fun generateEmbedding(
+        handle: Long,
+        text: String,
+        bufferSize: Int
+    ): CactusEmbeddingResult = withContext(Dispatchers.Default) {
+        return@withContext memScoped {
+            println("CactusContext: Generating embedding for text: ${if (text.length > 50) text.substring(0, 50) + "..." else text}")
+            println("CactusContext: Buffer allocated for $bufferSize float elements")
+
+            val embeddingDimPtr = alloc<ULongVar>()
+            val embeddingsBuffer = allocArray<FloatVar>(bufferSize)
+
+            // Calculate buffer size in bytes (bufferSize * sizeof(float))
+            val bufferSizeInBytes = bufferSize * 4
+
+            val result = cactus_embed(
+                handle.toCPointer(),
+                text,
+                embeddingsBuffer,
+                bufferSizeInBytes.convert(),
+                embeddingDimPtr.ptr
+            )
+
+            println("CactusContext: Received embedding result code: $result")
+
+            if (result > 0) {
+                val actualEmbeddingDim = embeddingDimPtr.value.toInt()
+                println("CactusContext: Actual embedding dimension: $actualEmbeddingDim")
+
+                if (actualEmbeddingDim > bufferSize) {
+                    return@memScoped CactusEmbeddingResult(
+                        success = false,
+                        embeddings = emptyList(),
+                        dimension = 0,
+                        errorMessage = "Embedding dimension ($actualEmbeddingDim) exceeds allocated buffer size ($bufferSize)"
+                    )
+                }
+
+                val embeddings = mutableListOf<Double>()
+                for (i in 0 until actualEmbeddingDim) {
+                    embeddings.add(embeddingsBuffer[i].toDouble())
+                }
+
+                println("CactusContext: Successfully extracted ${embeddings.size} embedding values")
+
+                CactusEmbeddingResult(
+                    success = true,
+                    embeddings = embeddings,
+                    dimension = actualEmbeddingDim
+                )
+            } else {
+                CactusEmbeddingResult(
+                    success = false,
+                    embeddings = emptyList(),
+                    dimension = 0,
+                    errorMessage = "Embedding generation failed with code $result"
+                )
+            }
+        }
+    }
+
     actual fun getBundleId(): String {
         return NSBundle.mainBundle.bundleIdentifier ?: "unknown"
     }

@@ -109,6 +109,30 @@ Java_com_cactus_CactusLibrary_cactus_1complete(JNIEnv *env, jclass clazz, jlong 
     return result;
 }
 
+JNIEXPORT jint JNICALL
+Java_com_cactus_CactusLibrary_cactus_1embed(JNIEnv *env, jclass clazz, jlong model,
+                                             jstring text, jfloatArray embeddings_buffer,
+                                             jint buffer_size, jintArray embedding_dim_ptr) {
+    const char *text_str = env->GetStringUTFChars(text, 0);
+    jfloat *buffer = env->GetFloatArrayElements(embeddings_buffer, 0);
+    jint *dim_ptr = env->GetIntArrayElements(embedding_dim_ptr, 0);
+    
+    size_t embedding_dim = 0;
+    int result = cactus_embed(reinterpret_cast<cactus_model_t>(model), text_str,
+                             reinterpret_cast<float*>(buffer), static_cast<size_t>(buffer_size),
+                             &embedding_dim);
+        
+    if (result > 0) {
+        dim_ptr[0] = static_cast<jint>(embedding_dim);
+    }
+    
+    env->ReleaseFloatArrayElements(embeddings_buffer, buffer, 0);
+    env->ReleaseIntArrayElements(embedding_dim_ptr, dim_ptr, 0);
+    env->ReleaseStringUTFChars(text, text_str);
+    
+    return result;
+}
+
 JNIEXPORT void JNICALL
 Java_com_cactus_CactusLibrary_cactus_1destroy(JNIEnv *env, jclass clazz, jlong model) {
     LOGI("Destroying cactus model");

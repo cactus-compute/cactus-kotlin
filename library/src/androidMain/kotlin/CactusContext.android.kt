@@ -183,6 +183,62 @@ actual object CactusContext {
         }
     }
 
+    actual suspend fun generateEmbedding(
+        handle: Long,
+        text: String,
+        bufferSize: Int
+    ): CactusEmbeddingResult = withContext(Dispatchers.Default) {
+        Log.d("Cactus", "Generating embedding for text: ${if (text.length > 50) text.substring(0, 50) + "..." else text}")
+        Log.d("Cactus", "Buffer allocated for $bufferSize float elements")
+
+        val embeddingsBuffer = FloatArray(bufferSize)
+        val embeddingDimPtr = IntArray(1) // To receive the actual dimension
+
+        val result = lib.cactus_embed(
+            handle,
+            text,
+            embeddingsBuffer,
+            bufferSize * 4, // Buffer size in bytes (bufferSize * sizeof(float))
+            embeddingDimPtr
+        )
+
+        Log.d("Cactus", "Received embedding result code: $result")
+
+        if (result > 0) {
+            val actualEmbeddingDim = embeddingDimPtr[0]
+            Log.d("Cactus", "Actual embedding dimension: $actualEmbeddingDim")
+
+            if (actualEmbeddingDim > bufferSize) {
+                return@withContext CactusEmbeddingResult(
+                    success = false,
+                    embeddings = emptyList(),
+                    dimension = 0,
+                    errorMessage = "Embedding dimension ($actualEmbeddingDim) exceeds allocated buffer size ($bufferSize)"
+                )
+            }
+
+            val embeddings = mutableListOf<Double>()
+            for (i in 0 until actualEmbeddingDim) {
+                embeddings.add(embeddingsBuffer[i].toDouble())
+            }
+
+            Log.d("Cactus", "Successfully extracted ${embeddings.size} embedding values")
+
+            CactusEmbeddingResult(
+                success = true,
+                embeddings = embeddings,
+                dimension = actualEmbeddingDim
+            )
+        } else {
+            CactusEmbeddingResult(
+                success = false,
+                embeddings = emptyList(),
+                dimension = 0,
+                errorMessage = "Embedding generation failed with code $result"
+            )
+        }
+    }
+
     actual fun getBundleId(): String {
         return CactusContextInitializer.getApplicationContext().packageName
     }
