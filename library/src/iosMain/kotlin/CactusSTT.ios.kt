@@ -32,7 +32,9 @@ actual suspend fun downloadSTTModel(
         )
         if (!spkOk) return@withContext false
         true
-    } catch (_: Throwable) {
+    } catch (e: Exception) {
+        println("Error downloading STT model: ${e.message}")
+        e.printStackTrace()
         false
     }
 }
@@ -53,17 +55,19 @@ actual suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): B
 }
 
 actual suspend fun performSTT(params: SpeechRecognitionParams, filePath: String?): SpeechRecognitionResult? {
+    println("CactusSTT.performSTT() called with $params")
     return try {
-        println("iOS performSTT called with language=$params")
-
-        if (!isSpeechRecognitionAuthorized()) {
-            println("Requesting speech permissions...")
-            val permissionGranted = requestSpeechPermissions()
-            if (!permissionGranted) {
-                println("Speech recognition permission not granted")
-                return null
+        // Request microphone permissions if needed
+        filePath?.let {
+            if (!isSpeechRecognitionAuthorized()) {
+                println("Requesting speech permissions...")
+                val permissionGranted = requestSpeechPermissions()
+                if (!permissionGranted) {
+                    println("Speech recognition permission not granted")
+                    return null
+                }
+                println("Speech recognition permission granted")
             }
-            println("Speech recognition permission granted")
         }
 
         if (!isSpeechRecognitionAvailable()) {
@@ -73,21 +77,11 @@ actual suspend fun performSTT(params: SpeechRecognitionParams, filePath: String?
             )
         }
 
-        println("Creating speech recognition params (on-device mode)...")
-
-        println("Calling performSpeechRecognition...")
         val speechResult = performSpeechRecognition(params, filePath)
-
-        println("performSpeechRecognition returned: $speechResult")
-
-        if (speechResult == null) {
-            println("❌ speechResult is null")
-            return null
-        }
-
+        println("CactusSTT.performSTT() got result: ${speechResult?.text}")
         speechResult
     } catch (e: Exception) {
-        println("STT error: $e")
+        println("CactusSTT.performSTT() error: ${e.message}")
         e.printStackTrace()
         SpeechRecognitionResult(
             success = false,
