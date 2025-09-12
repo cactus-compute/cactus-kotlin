@@ -58,16 +58,13 @@ actual suspend fun performSTT(params: SpeechRecognitionParams, filePath: String?
     println("CactusSTT.performSTT() called with $params")
     return try {
         // Request microphone permissions if needed
-        filePath?.let {
-            if (!isSpeechRecognitionAuthorized()) {
-                println("Requesting speech permissions...")
-                val permissionGranted = requestSpeechPermissions()
-                if (!permissionGranted) {
-                    println("Speech recognition permission not granted")
-                    return null
-                }
-                println("Speech recognition permission granted")
+        if(filePath == null && !isSpeechRecognitionAuthorized()) {
+            val permissionGranted = requestSpeechPermissions()
+            if (!permissionGranted) {
+                println("Speech recognition permission not granted")
+                return null
             }
+            println("Speech recognition permission granted")
         }
 
         if (!isSpeechRecognitionAvailable()) {
