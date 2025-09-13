@@ -7,6 +7,7 @@ import kotlin.time.TimeSource
 class CactusSTT {
     private var isInitialized = false
     private var lastDownloadedModelName: String = "vosk-en-us"
+    private var lastDownloadedModelFile: String = "vosk-model-small-en-us-0.15"
     private val timeSource = TimeSource.Monotonic
 
 
@@ -19,11 +20,10 @@ class CactusSTT {
     suspend fun download(
         model: String = "vosk-en-us"
     ): Boolean {
-        val currentModel  = getModel(model) ?: run {
-            println("No data found for model: $model")
-            return false
-        }
-        val success = downloadSTTModel(currentModel.url, currentModel.file_name + ".zip", spkModelUrl, spkModelFolder + ".zip")
+        val currentModel  = getModel(model)
+        val success = currentModel.url?.let {
+            downloadSTTModel(currentModel.url, currentModel.file_name + ".zip", spkModelUrl, spkModelFolder + ".zip")
+        } ?: false
         if (success) {
             lastDownloadedModelName = model
         }
@@ -33,10 +33,7 @@ class CactusSTT {
     suspend fun init(model: String? = lastDownloadedModelName): Boolean {
         isInitialized = false
         try {
-            val currentModel = getModel(model!!) ?: run {
-                println("No data found for model: $model")
-                return false
-            }
+            val currentModel = getModel(model!!)
             isInitialized = initializeSTT(currentModel.file_name, spkModelFolder)
             if (Telemetry.isInitialized) {
                 val message = if (isInitialized) null else "Failed to initialize model: ${currentModel.file_name}"
@@ -58,10 +55,7 @@ class CactusSTT {
 
     suspend fun transcribe(params: SpeechRecognitionParams, filePath: String? = null): SpeechRecognitionResult? {
         if (isInitialized) {
-            val currentModel = getModel(lastDownloadedModelName) ?: run {
-                println("No data found for model: $lastDownloadedModelName")
-                return null
-            }
+            val currentModel = getModel(lastDownloadedModelName)
             val startTime = timeSource.markNow()
             val result = performSTT(params, filePath)
             if (Telemetry.isInitialized) {
@@ -100,18 +94,22 @@ class CactusSTT {
     suspend fun isModelDownloaded(
         modelName: String = lastDownloadedModelName
     ): Boolean {
-        val currentModel = getModel(modelName) ?: run {
-            println("No data found for model: $lastDownloadedModelName")
-            return false
-        }
+        val currentModel = getModel(modelName)
         return modelExists(currentModel.file_name) && modelExists(spkModelFolder)
     }
 
-    private suspend fun getModel(slug: String): VoiceModel? {
+    private suspend fun getModel(slug: String): VoiceModel {
         if (voiceModels.isEmpty()) {
             voiceModels = getVoiceModels()
         }
-        return voiceModels.firstOrNull { it.slug == slug }
+        if (voiceModels.isEmpty()) {
+            println("No voice models available from Supabase, returning default model")
+            return VoiceModel(
+                slug = lastDownloadedModelName,
+                file_name = lastDownloadedModelFile
+            )
+        }
+        return voiceModels.first { it.slug == slug }
     }
 }
 
