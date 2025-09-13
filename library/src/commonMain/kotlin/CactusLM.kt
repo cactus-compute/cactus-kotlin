@@ -62,8 +62,7 @@ class CactusLM {
 
             val result = CactusContext.completion(currentHandle, messages, params, toolsJson, onToken)
 
-            // Track telemetry for successful completions (if telemetry is initialized)
-            if (result.success && Telemetry.isInitialized) {
+            if (Telemetry.isInitialized) {
                 val initParams = CactusInitParams(
                     model = _lastDownloadedModel,
                 )
@@ -101,10 +100,23 @@ class CactusLM {
             println("CactusLM: Embedding generation ${if (result.success) "completed successfully" else "failed"}: " +
                     "dimension=${result.dimension}, " +
                     "embeddings_length=${result.embeddings.size}")
+
+            if (Telemetry.isInitialized) {
+                val initParams = CactusInitParams(
+                    model = _lastDownloadedModel,
+                )
+                Telemetry.instance?.logEmbedding(result, initParams)
+            }
             
             return result
         } catch (e: Exception) {
             println("CactusLM: Exception during embedding generation: $e")
+            if (Telemetry.isInitialized) {
+                val initParams = CactusInitParams(
+                    model = _lastDownloadedModel,
+                )
+                Telemetry.instance?.logEmbedding(CactusEmbeddingResult(success = false), initParams, message = e.message)
+            }
             return CactusEmbeddingResult(
                 success = false,
                 embeddings = emptyList(),
