@@ -1,6 +1,7 @@
 package com.cactus.services
 
 import com.cactus.CactusCompletionResult
+import com.cactus.CactusEmbeddingResult
 import com.cactus.CactusInitParams
 import com.cactus.models.LogRecord
 import com.cactus.utils.getDeviceId
@@ -102,6 +103,24 @@ class Telemetry private constructor(
             telemetryToken = cactusTelemetryToken,
             message = message,
             audioDuration = result?.totalTimeMs?.toLong()
+        )
+
+        Supabase.sendLogRecord(record)
+    }
+
+    suspend fun logEmbedding(
+        result: CactusEmbeddingResult?,
+        options: CactusInitParams,
+        message: String? = null,
+    ) {
+        val record = LogRecord(
+            eventType = "embedding",
+            projectId = projectId,
+            deviceId = deviceId,
+            model = options.model,
+            success = result?.success,
+            message = message,
+            telemetryToken = cactusTelemetryToken
         )
 
         Supabase.sendLogRecord(record)
