@@ -3,6 +3,7 @@ package com.cactus.services
 import com.cactus.models.BufferedLogRecord
 import com.cactus.models.LogRecord
 import kotlinx.cinterop.*
+import kotlinx.serialization.json.Json
 import platform.Foundation.*
 
 @OptIn(ExperimentalForeignApi::class)
@@ -14,12 +15,10 @@ actual object LogBuffer {
         return try {
             val userDefaults = NSUserDefaults.standardUserDefaults
             val jsonString = userDefaults.stringForKey(FAILED_LOG_RECORDS_KEY)
-            
-            if (jsonString == null) return emptyList()
-            
-            // For now, return empty list - we'll implement proper JSON parsing later
-            // This is a simplified version to get the structure working
-            emptyList()
+
+            if (jsonString.isNullOrEmpty()) return emptyList()
+
+            Json.decodeFromString<List<BufferedLogRecord>>(jsonString)
         } catch (e: Exception) {
             println("Error loading failed log records: $e")
             emptyList()
@@ -71,8 +70,7 @@ actual object LogBuffer {
     private suspend fun saveFailedLogRecords(records: List<BufferedLogRecord>) {
         try {
             val userDefaults = NSUserDefaults.standardUserDefaults
-            // For now, just store a simple string - we'll implement proper JSON serialization later
-            val jsonString = "[]" // Empty array for now
+            val jsonString = Json.encodeToString(records)
             userDefaults.setObject(jsonString, FAILED_LOG_RECORDS_KEY)
             userDefaults.synchronize()
         } catch (e: Exception) {

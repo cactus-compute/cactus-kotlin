@@ -4,8 +4,8 @@ import com.cactus.models.BufferedLogRecord
 import com.cactus.models.LogRecord
 
 expect object LogBuffer {
-    suspend fun loadFailedLogRecords(): List<BufferedLogRecord>
-    suspend fun clearFailedLogRecords()
-    suspend fun handleFailedLogRecord(record: LogRecord)
-    suspend fun handleRetryFailedLogRecord(record: LogRecord)
+    internal suspend fun loadFailedLogRecords(): List<BufferedLogRecord>
+    internal suspend fun clearFailedLogRecords()
+    internal suspend fun handleFailedLogRecord(record: LogRecord)
+    internal suspend fun handleRetryFailedLogRecord(record: LogRecord)
 }

@@ -5,6 +5,8 @@ import android.content.SharedPreferences
 import com.cactus.CactusContextInitializer
 import com.cactus.models.BufferedLogRecord
 import com.cactus.models.LogRecord
+import androidx.core.content.edit
+import kotlinx.serialization.json.Json
 
 actual object LogBuffer {
     private const val MAX_RETRIES = 3
@@ -20,12 +22,10 @@ actual object LogBuffer {
         return try {
             val prefs = getSharedPreferences()
             val jsonString = prefs.getString(FAILED_LOG_RECORDS_KEY, null)
-            
-            if (jsonString == null) return emptyList()
-            
-            // For now, return empty list - we'll implement proper JSON parsing later
-            // This is a simplified version to get the structure working
-            emptyList()
+
+            if (jsonString.isNullOrEmpty()) return emptyList()
+
+            Json.decodeFromString<List<BufferedLogRecord>>(jsonString)
         } catch (e: Exception) {
             println("Error loading failed log records: $e")
             emptyList()
@@ -35,7 +35,7 @@ actual object LogBuffer {
     actual suspend fun clearFailedLogRecords() {
         try {
             val prefs = getSharedPreferences()
-            prefs.edit().remove(FAILED_LOG_RECORDS_KEY).apply()
+            prefs.edit { remove(FAILED_LOG_RECORDS_KEY) }
         } catch (e: Exception) {
             println("Error clearing failed log records: $e")
         }
@@ -76,9 +76,8 @@ actual object LogBuffer {
     private suspend fun saveFailedLogRecords(records: List<BufferedLogRecord>) {
         try {
             val prefs = getSharedPreferences()
-            // For now, just store a simple string - we'll implement proper JSON serialization later
-            val jsonString = "[]" // Empty array for now
-            prefs.edit().putString(FAILED_LOG_RECORDS_KEY, jsonString).apply()
+            val jsonString = Json.encodeToString(records)
+            prefs.edit { putString(FAILED_LOG_RECORDS_KEY, jsonString) }
         } catch (e: Exception) {
             println("Error saving failed log records: $e")
         }
