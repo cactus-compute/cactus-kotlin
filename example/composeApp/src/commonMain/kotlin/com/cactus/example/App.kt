@@ -47,16 +47,9 @@ fun App() {
         }
     }
 
-    // Initialize telemetry
+    // Set telemetry token
     LaunchedEffect(Unit) {
-        try {
-            val deviceId = CactusTelemetry.fetchDeviceId()
-            deviceId?.let { it ->
-                CactusTelemetry.init(it, "729ebf35-465f-441b-932d-f7819a36d8ca")
-            }
-        } catch (e: Exception) {
-            println("App: Exception during telemetry init: $e")
-        }
+        CactusTelemetry.setTelemetryToken("729ebf35-465f-441b-932d-f7819a36d8ca")
     }
 
     fun downloadModel() {
