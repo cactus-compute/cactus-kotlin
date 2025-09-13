@@ -159,15 +159,6 @@ fun App() {
                         maxTokens = 50,
                         temperature = 0.7
                     ),
-                    tools = listOf(
-                        createTool(
-                            name = "get_weather",
-                            description = "Get weather for a location",
-                            parameters = mapOf(
-                                "location" to ToolParameter("string", "City name", true)
-                            )
-                        )
-                    ),
                     onToken = { token, tokenId ->
                         if(firstToken) {
                             lastResponse = ""
