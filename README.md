@@ -9,7 +9,30 @@ Official Kotlin Multiplatform library for Cactus, a framework for deploying LLM 
 
 ## Installation
 
-Add to your KMP project's `build.gradle.kts`:
+### 1. Add the repository to your `settings.gradle.kts`:
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        maven {
+            name = "GitHubPackagesCactus"
+            url = uri("https://maven.pkg.github.com/cactus-compute/cactus-kotlin")
+            credentials {
+                username = properties.getProperty("github.username") ?: System.getenv("GITHUB_ACTOR")
+                password = properties.getProperty("github.token") ?: System.getenv("GITHUB_TOKEN")
+            }
+        }
+    }
+}
+```
+### 2. Add credentials
+Add your GitHub username and token to `local.properties`:
+```
+github.username=your-username
+github.token=your-personal-access-token
+```
+Or set them as environment variables: `GITHUB_ACTOR` and `GITHUB_TOKEN`.
+
+### 3. Add to your KMP project's `build.gradle.kts`:
 ```kotlin
 kotlin {
     sourceSets {
@@ -22,8 +45,11 @@ kotlin {
 }
 ```
 
-For iOS projects, add the dependency through Swift Package Manager:
-- In Xcode: File → Add Package Dependencies → Paste `https://github.com/cactus-compute/cactus-kotlin` → Click Add
+### 4. Add the permissions to your manifest (Android)
+```xml
+<uses-permission android:name="android.permission.INTERNET" /> // for model downloads
+<uses-permission android:name="android.permission.RECORD_AUDIO" /> // for transcription
+```
 
 ## Getting Started
 
@@ -37,7 +63,7 @@ CactusTelemetry.setTelemetryToken("your_token_here")
 
 ## Language Model (LLM)
 
-The `CactusLM` class provides text completion capabilities with support for function calling.
+The `CactusLM` class provides text completion capabilities with support for function calling (WIP).
 
 ### Basic Usage
 ```kotlin
@@ -98,7 +124,7 @@ val result = lm.generateCompletion(
 )
 ```
 
-### Function Calling
+### Function Calling (Experimental)
 ```kotlin
 import com.cactus.models.Tool
 import com.cactus.models.ToolParameter
