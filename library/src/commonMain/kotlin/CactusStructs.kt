@@ -29,8 +29,8 @@ data class CactusCompletionResult(
 
 data class CactusEmbeddingResult(
     val success: Boolean,
-    val embeddings: List<Double>,
-    val dimension: Int,
+    val embeddings: List<Double> = listOf(),
+    val dimension: Int? = null,
     val errorMessage: String? = null
 )
 
@@ -56,11 +56,11 @@ data class CactusModel(
 
 @Serializable
 data class VoiceModel(
-    val created_at: String,
+    val created_at: String? = null,
     val slug: String,
-    val language: String,
-    val url: String,
-    val size_mb: Int,
+    val language: String? = null,
+    val url: String? = null,
+    val size_mb: Int? = null,
     val file_name: String,
     var isDownloaded: Boolean = false
 )
