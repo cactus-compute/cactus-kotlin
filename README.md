@@ -32,10 +32,7 @@ For iOS projects, add the dependency through Swift Package Manager:
 import com.cactus.services.CactusTelemetry
 
 // Initialize telemetry for usage analytics (optional)
-val deviceId = CactusTelemetry.fetchDeviceId()
-deviceId?.let { 
-    CactusTelemetry.init(it, "your-project-id")
-}
+CactusTelemetry.setTelemetryToken("your_token_here")
 ```
 
 ## Language Model (LLM)
