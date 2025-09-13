@@ -8,9 +8,9 @@ object CactusId {
     // RFC 4122 URL namespace
     private val NAMESPACE_URL: ByteArray = "6ba7b811-9dad-11d1-80b4-00c04fd430c8".toUuidBytes()
 
-    fun getProjectId(seed: String = "v1"): String {
+    internal fun getProjectId(seed: String = "v1"): String {
         val bundleId = getBundleId()
-        val name = "https://your.plugin/$bundleId/$seed"
+        val name = "cactus-kotlin/$bundleId/$seed"
         return uuidV5(name.encodeToByteArray())
     }
 
