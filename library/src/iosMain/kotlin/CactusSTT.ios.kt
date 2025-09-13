@@ -10,6 +10,7 @@ import platform.Foundation.*
 actual suspend fun downloadSTTModel(
     modelUrl: String,
     modelName: String,
+    slug: String,
     spkModelUrl: String,
     spkModelName: String
 ): Boolean = withContext(Dispatchers.Default) {
@@ -21,7 +22,8 @@ actual suspend fun downloadSTTModel(
         val modelOk = IOSFileUtils.ensureFilePresentOrDownloadedAndUnzipped(
             urlString = modelUrl,
             fileName = modelName,
-            baseDir = modelsDir
+            baseDir = modelsDir,
+            extractedDirName = slug
         )
         if (!modelOk) return@withContext false
 

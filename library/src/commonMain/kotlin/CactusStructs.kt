@@ -56,11 +56,11 @@ data class CactusModel(
 
 @Serializable
 data class VoiceModel(
-    val created_at: String? = null,
+    val created_at: String,
     val slug: String,
-    val language: String? = null,
-    val url: String? = null,
-    val size_mb: Int? = null,
+    val language: String,
+    val url: String,
+    val size_mb: Int,
     val file_name: String,
     var isDownloaded: Boolean = false
 )

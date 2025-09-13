@@ -7,7 +7,6 @@ import kotlin.time.TimeSource
 class CactusSTT {
     private var isInitialized = false
     private var lastDownloadedModelName: String = "vosk-en-us"
-    private var lastDownloadedModelFile: String = "vosk-model-small-en-us-0.15"
     private val timeSource = TimeSource.Monotonic
 
 
@@ -18,25 +17,25 @@ class CactusSTT {
     private var voiceModels = listOf<VoiceModel>()
 
     suspend fun download(
-        model: String = "vosk-en-us"
+        model: String = lastDownloadedModelName
     ): Boolean {
-        val currentModel  = getModel(model)
-        val success = currentModel.url?.let {
-            downloadSTTModel(currentModel.url, currentModel.file_name + ".zip", spkModelUrl, spkModelFolder + ".zip")
-        } ?: false
+        val currentModel  = getModel(model) ?: run {
+            println("No data found for model: $model")
+            return false
+        }
+        val success = downloadSTTModel(currentModel.url, currentModel.file_name + ".zip", model, spkModelUrl, spkModelFolder + ".zip")
         if (success) {
             lastDownloadedModelName = model
         }
         return success
     }
 
-    suspend fun init(model: String? = lastDownloadedModelName): Boolean {
+    suspend fun init(model: String = lastDownloadedModelName): Boolean {
         isInitialized = false
         try {
-            val currentModel = getModel(model!!)
-            isInitialized = initializeSTT(currentModel.file_name, spkModelFolder)
+            isInitialized = initializeSTT(model, spkModelFolder)
             if (Telemetry.isInitialized) {
-                val message = if (isInitialized) null else "Failed to initialize model: ${currentModel.file_name}"
+                val message = if (isInitialized) null else "Failed to initialize model: $model"
                 Telemetry.instance?.logInit(isInitialized, CactusInitParams(
                     model = model
                 ), message)
@@ -55,22 +54,29 @@ class CactusSTT {
 
     suspend fun transcribe(params: SpeechRecognitionParams, filePath: String? = null): SpeechRecognitionResult? {
         if (isInitialized) {
-            val currentModel = getModel(lastDownloadedModelName)
             val startTime = timeSource.markNow()
             val result = performSTT(params, filePath)
             if (Telemetry.isInitialized) {
                 Telemetry.instance?.logTranscription(
                     CactusCompletionResult(
                         success = result?.success == true,
-                        response = result?.text,
                         totalTimeMs = result?.processingTime
                     ),
-                    CactusInitParams(model = currentModel.file_name),
+                    CactusInitParams(model = lastDownloadedModelName),
                     message = if (result?.success == false) result.text else null,
                     responseTime = startTime.elapsedNow().inWholeMilliseconds.toDouble()
                 )
             }
             return result
+        }
+        if (Telemetry.isInitialized) {
+            Telemetry.instance?.logTranscription(
+                CactusCompletionResult(
+                    success = false,
+                ),
+                CactusInitParams(model = lastDownloadedModelName),
+                message = "STT not initialized"
+            )
         }
         return null
     }
@@ -94,26 +100,22 @@ class CactusSTT {
     suspend fun isModelDownloaded(
         modelName: String = lastDownloadedModelName
     ): Boolean {
-        val currentModel = getModel(modelName)
+        val currentModel = getModel(modelName) ?: run {
+            println("No data found for model: $lastDownloadedModelName")
+            return false
+        }
         return modelExists(currentModel.file_name) && modelExists(spkModelFolder)
     }
 
-    private suspend fun getModel(slug: String): VoiceModel {
+    private suspend fun getModel(slug: String): VoiceModel? {
         if (voiceModels.isEmpty()) {
             voiceModels = getVoiceModels()
         }
-        if (voiceModels.isEmpty()) {
-            println("No voice models available from Supabase, returning default model")
-            return VoiceModel(
-                slug = lastDownloadedModelName,
-                file_name = lastDownloadedModelFile
-            )
-        }
-        return voiceModels.first { it.slug == slug }
+        return voiceModels.firstOrNull { it.slug == slug }
     }
 }
 
-expect suspend fun downloadSTTModel(modelUrl: String, modelName: String, spkModelUrl: String, spkModelName: String): Boolean
+expect suspend fun downloadSTTModel(modelUrl: String, modelName: String, slug:String, spkModelUrl: String, spkModelName: String): Boolean
 expect suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): Boolean
 expect suspend fun performSTT(params: SpeechRecognitionParams, filePath: String?): SpeechRecognitionResult?
 expect fun stopSTT()

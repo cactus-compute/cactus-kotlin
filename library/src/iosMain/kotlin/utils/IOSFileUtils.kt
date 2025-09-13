@@ -22,7 +22,8 @@ object IOSFileUtils {
     fun ensureFilePresentOrDownloadedAndUnzipped(
         urlString: String,
         fileName: String,
-        baseDir: String
+        baseDir: String,
+        extractedDirName: String = fileName.removeSuffix(".zip")
     ): Boolean {
         val fm = NSFileManager.Companion.defaultManager
 
@@ -32,7 +33,6 @@ object IOSFileUtils {
         if (!downloadFile(urlString, path)) return false
 
         if (fileName.endsWith(".zip", ignoreCase = true)) {
-            val extractedDirName = fileName.removeSuffix(".zip")
             val targetDir = "$baseDir/$extractedDirName"
             val unzipOk = extractZip(zipFilePath = path.toPath(), outputDir = targetDir.toPath())
             if (unzipOk) {

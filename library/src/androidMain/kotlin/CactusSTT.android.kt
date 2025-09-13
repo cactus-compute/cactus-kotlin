@@ -10,7 +10,7 @@ private val applicationContext: Context by lazy {
     CactusContextInitializer.getApplicationContext()
 }
 
-actual suspend fun downloadSTTModel(modelUrl: String, modelName: String, spkModelUrl: String, spkModelName: String): Boolean {
+actual suspend fun downloadSTTModel(modelUrl: String, modelName: String, slug: String, spkModelUrl: String, spkModelName: String): Boolean {
     return withContext(Dispatchers.IO) {
         try {
             val modelsDir = File(applicationContext.filesDir, "models/vosk")
@@ -28,7 +28,8 @@ actual suspend fun downloadSTTModel(modelUrl: String, modelName: String, spkMode
             }
 
             if (modelName.endsWith(".zip")) {
-                extractZip(modelFile, modelsDir)
+                val slugDir = File(modelsDir, slug)
+                extractZip(modelFile, slugDir)
                 modelFile.delete()
             }
 
@@ -43,7 +44,8 @@ actual suspend fun downloadSTTModel(modelUrl: String, modelName: String, spkMode
             }
 
             if (spkModelName.endsWith(".zip")) {
-                extractZip(spkModelFile, modelsDir)
+                val spkModelDir = File(modelsDir, spkModelName.replace(".zip", ""))
+                extractZip(spkModelFile, spkModelDir)
                 spkModelFile.delete()
             }
 
@@ -119,11 +121,20 @@ actual suspend fun modelExists(modelName: String): Boolean {
 
 private fun extractZip(zipFile: File, targetDir: File) {
     try {
+        if (!targetDir.exists()) targetDir.mkdirs()
+        
         java.util.zip.ZipInputStream(zipFile.inputStream().buffered()).use { zip ->
             var entry = zip.nextEntry
             while (entry != null) {
                 if (!entry.isDirectory) {
-                    val entryFile = File(targetDir, entry.name)
+                    // Strip the first directory level if it exists (removes the top-level folder from zip)
+                    val relativePath = if (entry.name.contains('/')) {
+                        entry.name.substringAfter('/')
+                    } else {
+                        entry.name
+                    }
+                    
+                    val entryFile = File(targetDir, relativePath)
                     entryFile.parentFile?.mkdirs()
                     entryFile.outputStream().use { output ->
                         zip.copyTo(output)
