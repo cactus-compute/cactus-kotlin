@@ -3,17 +3,14 @@ package com.cactus.services
 import com.cactus.CactusModel
 
 object CactusTelemetry {
-    fun init(deviceId: String?, cactusTelemetryToken: String?): Telemetry {
+    fun setTelemetryToken(token: String) {
+        Telemetry.instance?.setCactusToken(token)
+    }
+    internal suspend fun init() {
         val projectId = CactusId.getProjectId()
-        return Telemetry.init(projectId, deviceId, cactusTelemetryToken)
+        val deviceId = Telemetry.fetchDeviceId()
+        Telemetry.init(projectId, deviceId)
     }
-
-    suspend fun fetchDeviceId(): String? {
-        return Telemetry.fetchDeviceId()
-    }
-
-    val isInitialized: Boolean
-        get() = Telemetry.isInitialized
 }
 
 object CactusUtils {

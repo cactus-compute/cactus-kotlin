@@ -11,9 +11,9 @@ import com.cactus.utils.getDeviceMetadata
  */
 class Telemetry private constructor(
     private val projectId: String?,
-    private val deviceId: String?,
-    private val cactusTelemetryToken: String?
+    private val deviceId: String?
 ) {
+    private var cactusTelemetryToken: String? = null
     companion object {
         private var _instance: Telemetry? = null
         
@@ -23,10 +23,9 @@ class Telemetry private constructor(
         val instance: Telemetry?
             get() = _instance
         
-        fun init(projectId: String?, deviceId: String?, cactusTelemetryToken: String?): Telemetry {
-            val telemetry = Telemetry(projectId, deviceId, cactusTelemetryToken)
-            _instance = telemetry
-            return telemetry
+        fun init(projectId: String?, deviceId: String?) {
+            _instance = Telemetry(projectId, deviceId)
+            println("Telemetry initialized with projectId: $projectId, deviceId: $deviceId")
         }
         
         suspend fun fetchDeviceId(): String? {
@@ -45,6 +44,10 @@ class Telemetry private constructor(
             }
             return deviceId
         }
+    }
+
+    fun setCactusToken(token: String) {
+        cactusTelemetryToken = token
     }
 
     suspend fun logInit(success: Boolean, options: CactusInitParams, message: String? = null) {
