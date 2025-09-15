@@ -7,26 +7,27 @@ import com.cactus.services.Telemetry
 
 class CactusLM {
     private var _handle: Long? = null
-    private var _lastDownloadedModel: String? = null
+    private var _lastDownloadedModel: String = "qwen3-0.6"
+    private var models = listOf<CactusModel>()
 
     suspend fun downloadModel(
-        model: String = "qwen3-0.6"
+        model: String = _lastDownloadedModel
     ): Boolean {
-        val url = Supabase.getModelDownloadUrl(model)
-        if (url == null) {
-            println("No download URL found for model: $model")
+        val currentModel  = getModel(model) ?: run {
+            println("No data found for model: $model")
             return false
         }
-        val actualFilename = url.split('?').first().split('/').last()
-        val success = _downloadAndExtractModel(url, actualFilename, model)
+        val actualFilename = currentModel.download_url.split('?').first().split('/').last()
+        val task = DownloadTask(currentModel.download_url, actualFilename, currentModel.slug)
+        val success = downloadAndExtractModels(listOf(task))
         if (success) {
-            _lastDownloadedModel = model
+            _lastDownloadedModel = currentModel.slug
         }
         return success
     }
 
     suspend fun initializeModel(params: CactusInitParams): Boolean {
-        val modelFolder = params.model ?: _lastDownloadedModel ?: "qwen3-0.6"
+        val modelFolder = params.model ?: _lastDownloadedModel
         val modelPath = getModelPath(modelFolder)
 
         _handle = CactusContext.initContext(modelPath, (params.contextSize ?: 2048).toUInt())
@@ -136,10 +137,32 @@ class CactusLM {
 
     fun isLoaded(): Boolean = _handle != null
 
-    private suspend fun _downloadAndExtractModel(url: String, filename: String, folder: String): Boolean {
-        return downloadAndExtractModel(url, filename, folder)
+    suspend fun getModels(): List<CactusModel> {
+        if (models.isEmpty()) {
+            models = Supabase.fetchModels()
+            for (model in models) {
+                model.isDownloaded = modelExists(model.slug)
+            }
+        }
+        return models
+    }
+
+    suspend fun isModelDownloaded(
+        modelName: String = _lastDownloadedModel
+    ): Boolean {
+        val currentModel = getModel(modelName) ?: run {
+            println("No data found for model: $_lastDownloadedModel")
+            return false
+        }
+        return modelExists(currentModel.slug)
+    }
+
+    private suspend fun getModel(slug: String): CactusModel? {
+        if (models.isEmpty()) {
+            models = getModels()
+        }
+        return models.firstOrNull { it.slug == slug }
     }
 }
 
-expect suspend fun downloadAndExtractModel(url: String, filename: String, folder: String): Boolean
 expect fun getModelPath(modelFolder: String): String

@@ -50,6 +50,8 @@ fun App() {
     // Set telemetry token
     LaunchedEffect(Unit) {
         CactusTelemetry.setTelemetryToken("729ebf35-465f-441b-932d-f7819a36d8ca")
+        println("LM models: ${lm.getModels()}")
+        println("Voice models: ${stt.getVoiceModels()}")
     }
 
     fun downloadModel() {
@@ -379,7 +381,7 @@ fun App() {
                             Column {
                                 availableModels.forEach { model ->
                                     Text(
-                                        "• ${model.name} (${model.sizeMb}MB)",
+                                        "• ${model.name} (${model.size_mb}MB)",
                                         style = MaterialTheme.typography.bodySmall
                                     )
                                 }
