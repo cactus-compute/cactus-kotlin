@@ -34,7 +34,7 @@ actual suspend fun initializeSpeechRecognition(modelFolder: String, spkModelFold
     return@withContext try {
         LibVosk.setLogLevel(LogLevel.WARNINGS)
 
-        val baseDir = File(applicationContext.filesDir, "models/vosk")
+        val baseDir = File(applicationContext.filesDir, "models")
         val modelDir = File(baseDir, modelFolder)
         val spkModelDir = File(baseDir, spkModelFolder)
 

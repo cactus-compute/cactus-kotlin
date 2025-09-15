@@ -23,7 +23,9 @@ class CactusSTT {
             println("No data found for model: $model")
             return false
         }
-        val success = downloadSTTModel(currentModel.url, currentModel.file_name + ".zip", model, spkModelUrl, spkModelFolder + ".zip")
+        val modelTask = DownloadTask(currentModel.url, currentModel.file_name + ".zip", model)
+        val spkModelTask = DownloadTask(spkModelUrl, spkModelFolder + ".zip", spkModelFolder)
+        val success = downloadAndExtractModels(listOf(modelTask, spkModelTask))
         if (success) {
             lastDownloadedModelName = model
         }
@@ -91,7 +93,7 @@ class CactusSTT {
         if (voiceModels.isEmpty()) {
             voiceModels = Supabase.fetchVoiceModels()
             for (model in voiceModels) {
-                model.isDownloaded = modelExists(model.file_name)
+                model.isDownloaded = modelExists(model.slug)
             }
         }
         return voiceModels
@@ -115,8 +117,6 @@ class CactusSTT {
     }
 }
 
-expect suspend fun downloadSTTModel(modelUrl: String, modelName: String, slug:String, spkModelUrl: String, spkModelName: String): Boolean
 expect suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): Boolean
 expect suspend fun performSTT(params: SpeechRecognitionParams, filePath: String?): SpeechRecognitionResult?
 expect fun stopSTT()
-expect suspend fun modelExists(modelName: String): Boolean

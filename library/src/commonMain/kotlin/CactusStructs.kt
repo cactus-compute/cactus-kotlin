@@ -45,13 +45,16 @@ data class CactusInitParams(
     val contextSize: Int? = null
 )
 
+@Serializable
 data class CactusModel(
-    val createdAt: Instant,
+    val created_at: String,
     val slug: String,
-    val sizeMb: Int,
-    val supportsToolCalling: Boolean,
-    val supportsVision: Boolean,
-    val name: String
+    val download_url: String,
+    val size_mb: Int,
+    val supports_tool_calling: Boolean,
+    val supports_vision: Boolean,
+    val name: String,
+    var isDownloaded: Boolean = false
 )
 
 @Serializable

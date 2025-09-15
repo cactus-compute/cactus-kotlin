@@ -103,16 +103,11 @@ object IOSFileUtils {
         }
     }
 
-    fun getCachesDirectory(): String? {
-        return NSSearchPathForDirectoriesInDomains(
-            NSCachesDirectory, NSUserDomainMask, true
-        ).firstOrNull() as? String
-    }
-
-    fun getDocumentsDirectory(): String? {
-        return NSSearchPathForDirectoriesInDomains(
+    fun getModelsDirectory(): String? {
+        val documentsDirectory = NSSearchPathForDirectoriesInDomains(
             NSDocumentDirectory, NSUserDomainMask, true
         ).firstOrNull() as? String
+        return documentsDirectory?.let { "$it/models" }
     }
 
     fun createDirectoryIfNeeded(path: String): Boolean {

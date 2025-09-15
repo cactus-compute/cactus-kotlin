@@ -15,14 +15,12 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import platform.AVFAudio.*
-import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSDate
 import platform.Foundation.NSFileManager
-import platform.Foundation.NSSearchPathForDirectoriesInDomains
-import platform.Foundation.NSUserDomainMask
 import platform.Foundation.timeIntervalSinceReferenceDate
 import platform.Foundation.NSData
 import platform.Foundation.dataWithContentsOfFile
+import utils.IOSFileUtils
 import kotlin.coroutines.resume
 
 @OptIn(ExperimentalForeignApi::class)
@@ -42,11 +40,7 @@ actual suspend fun initializeSpeechRecognition(modelFolder: String, spkModelFold
     return@withContext try {
         vosk_set_log_level(-1) // -1 for warnings, to match Android's LogLevel.WARNINGS
 
-        val cachesDir = NSSearchPathForDirectoriesInDomains(
-            NSCachesDirectory, NSUserDomainMask, true
-        ).firstOrNull() as? String ?: return@withContext false
-
-        val baseDir = "$cachesDir/models/vosk"
+        val baseDir = IOSFileUtils.getModelsDirectory() ?: return@withContext false
 
         val modelDir = "$baseDir/$modelFolder"
         val spkModelDir = "$baseDir/$spkModelFolder"
