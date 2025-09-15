@@ -1,0 +1,64 @@
+package com.cactus.services
+
+import android.content.Context
+import android.content.SharedPreferences
+import androidx.core.content.edit
+import com.cactus.CactusContextInitializer
+import com.cactus.CactusModel
+import com.cactus.VoiceModel
+import kotlinx.serialization.json.Json
+
+internal actual object ModelCache {
+    private const val PREFS_NAME = "cactus_model_cache"
+    private const val MODELS_KEY = "cactus_models"
+    private const val VOICE_MODELS_KEY = "cactus_voice_models"
+
+    private fun getSharedPreferences(): SharedPreferences {
+        val context = CactusContextInitializer.getApplicationContext()
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    }
+
+    actual suspend fun saveModels(models: List<CactusModel>) {
+        try {
+            val prefs = getSharedPreferences()
+            val jsonString = Json.encodeToString(models)
+            prefs.edit { putString(MODELS_KEY, jsonString) }
+        } catch (e: Exception) {
+            println("Error saving models to cache: $e")
+        }
+    }
+
+    actual suspend fun loadModels(): List<CactusModel> {
+        return try {
+            val prefs = getSharedPreferences()
+            val jsonString = prefs.getString(MODELS_KEY, null)
+            if (jsonString.isNullOrEmpty()) return emptyList()
+            Json.decodeFromString<List<CactusModel>>(jsonString)
+        } catch (e: Exception) {
+            println("Error loading models from cache: $e")
+            emptyList()
+        }
+    }
+
+    actual suspend fun saveVoiceModels(models: List<VoiceModel>) {
+        try {
+            val prefs = getSharedPreferences()
+            val jsonString = Json.encodeToString(models)
+            prefs.edit { putString(VOICE_MODELS_KEY, jsonString) }
+        } catch (e: Exception) {
+            println("Error saving voice models to cache: $e")
+        }
+    }
+
+    actual suspend fun loadVoiceModels(): List<VoiceModel> {
+        return try {
+            val prefs = getSharedPreferences()
+            val jsonString = prefs.getString(VOICE_MODELS_KEY, null)
+            if (jsonString.isNullOrEmpty()) return emptyList()
+            Json.decodeFromString<List<VoiceModel>>(jsonString)
+        } catch (e: Exception) {
+            println("Error loading voice models from cache: $e")
+            emptyList()
+        }
+    }
+}

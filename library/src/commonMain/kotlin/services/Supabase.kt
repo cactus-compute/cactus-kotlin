@@ -14,31 +14,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 /**
- * Internal model representation with download URL
- */
-@Serializable
-internal data class InternalModel(
-    val created_at: String,
-    val slug: String,
-    val download_url: String,
-    val size_mb: Int,
-    val supports_tool_calling: Boolean,
-    val supports_vision: Boolean,
-    val name: String
-) {
-    fun toPublicModel(): CactusModel {
-        return CactusModel(
-            createdAt = Instant.parse(created_at),
-            slug = slug,
-            sizeMb = size_mb,
-            supportsToolCalling = supports_tool_calling,
-            supportsVision = supports_vision,
-            name = name
-        )
-    }
-}
-
-/**
  * Device registration request
  */
 @Serializable
@@ -159,22 +134,17 @@ object Supabase {
                 header("Accept-Profile", "cactus")
                 parameter("select", "*")
             }
-            
+
             if (response.status == HttpStatusCode.OK) {
-                val internalModels = response.body<List<InternalModel>>()
-                
-                modelDownloadUrls.clear()
-                
-                internalModels.map { internalModel ->
-                    modelDownloadUrls[internalModel.slug] = internalModel.download_url
-                    internalModel.toPublicModel()
-                }
+                val cactusModels = response.body<List<CactusModel>>()
+                ModelCache.saveModels(cactusModels)
+                cactusModels
             } else {
-                emptyList()
+                ModelCache.loadModels()
             }
         } catch (e: Exception) {
             println("Error fetching models: $e")
-            emptyList()
+            ModelCache.loadModels()
         }
     }
 
@@ -188,20 +158,15 @@ object Supabase {
             }
 
             if (response.status == HttpStatusCode.OK) {
-                response.body<List<VoiceModel>>()
+                val voiceModels = response.body<List<VoiceModel>>()
+                ModelCache.saveVoiceModels(voiceModels)
+                voiceModels
             } else {
-                emptyList()
+                ModelCache.loadVoiceModels()
             }
         } catch (e: Exception) {
             println("Error fetching voice models: $e")
-            emptyList()
+            ModelCache.loadVoiceModels()
         }
-    }
-
-    suspend fun getModelDownloadUrl(slug: String): String? {
-        if (modelDownloadUrls.isEmpty()) {
-            fetchModels()
-        }
-        return modelDownloadUrls[slug]
     }
 }
