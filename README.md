@@ -164,10 +164,6 @@ You can get a list of available models:
 lm.getModels()
 ```
 
-You can download various models by their slug identifier:
-- `"qwen3-0.6"` - Default lightweight model
-- Check Cactus documentation for complete model list
-
 ### LLM API Reference
 
 #### CactusLM Class
