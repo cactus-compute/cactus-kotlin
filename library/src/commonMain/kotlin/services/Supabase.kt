@@ -36,19 +36,14 @@ object Supabase {
             })
         }
     }
-    
-    // Private map to store slug to downloadUrl mappings
-    private val modelDownloadUrls = mutableMapOf<String, String>()
 
     suspend fun sendLogRecord(record: LogRecord): Boolean {
         return try {
-            // First, try to send just the current record
             val success = sendLogRecordsBatch(listOf(record))
             
             if (success) {
                 println("Successfully sent current log record")
                 
-                // Only if current record was successful, try to send buffered records
                 val failedRecords = LogBuffer.loadFailedLogRecords()
                 if (failedRecords.isNotEmpty()) {
                     println("Attempting to send ${failedRecords.size} buffered log records...")
@@ -68,7 +63,6 @@ object Supabase {
                     }
                 }
             } else {
-                // Current record failed, add it to buffer
                 LogBuffer.handleFailedLogRecord(record)
                 println("Current log record failed, added to buffer")
             }
