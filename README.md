@@ -30,6 +30,8 @@ Add your GitHub username and token to `local.properties`:
 github.username=your-username
 github.token=your-personal-access-token
 ```
+You can generate a personal access token by following the instructions on [GitHub's documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). The token needs `read:packages` scope.
+
 Or set them as environment variables: `GITHUB_ACTOR` and `GITHUB_TOKEN`.
 
 ### 3. Add to your KMP project's `build.gradle.kts`:
@@ -157,6 +159,11 @@ val result = lm.generateCompletion(
 ```
 
 ### Available Models
+You can get a list of available models:
+```kotlin
+lm.getModels()
+```
+
 You can download various models by their slug identifier:
 - `"qwen3-0.6"` - Default lightweight model
 - Check Cactus documentation for complete model list
@@ -168,6 +175,7 @@ You can download various models by their slug identifier:
 - `suspend fun initializeModel(params: CactusInitParams): Boolean` - Initialize model for inference
 - `suspend fun generateCompletion(messages: List<ChatMessage>, params: CactusCompletionParams, tools: List<Tool>? = null, onToken: CactusStreamingCallback? = null): CactusCompletionResult?` - Generate text completion
 - `fun unload()` - Free model from memory
+- `suspend fun getModels(): List<CactusModel>` - Get available LLM models
 - `fun isLoaded(): Boolean` - Check if model is loaded
 
 #### Data Classes
