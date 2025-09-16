@@ -100,7 +100,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, fil
             if (continuation.isActive) {
                 continuation.resume(SpeechRecognitionResult(
                     success = false,
-                    text = "Setting up offline speech recognition..."
+                    text = "Model not initialized"
                 ))
             }
             return@suspendCancellableCoroutine
@@ -434,6 +434,7 @@ private fun performMicrophoneBasedRecognition(
         if (continuation.isActive) {
             continuation.resume(SpeechRecognitionResult(
                 success = false,
+                eventSuccess = false,
                 text = e.message
             ))
         }

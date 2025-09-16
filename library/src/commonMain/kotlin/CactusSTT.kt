@@ -69,7 +69,7 @@ class CactusSTT {
             if (Telemetry.isInitialized) {
                 Telemetry.instance?.logTranscription(
                     CactusCompletionResult(
-                        success = result?.success == true,
+                        success = result?.eventSuccess == true,
                         totalTimeMs = result?.processingTime
                     ),
                     CactusInitParams(model = lastDownloadedModelName),

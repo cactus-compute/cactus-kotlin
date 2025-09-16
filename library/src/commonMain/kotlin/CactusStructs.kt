@@ -77,6 +77,7 @@ data class SpeechRecognitionParams(
 data class SpeechRecognitionResult(
     val success: Boolean,
     val text: String? = null,
+    val eventSuccess: Boolean = true,
     val processingTime: Double? = null
 )
 

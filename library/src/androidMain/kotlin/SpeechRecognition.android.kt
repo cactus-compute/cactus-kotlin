@@ -75,7 +75,7 @@ actual suspend fun performSpeechRecognition(params: SpeechRecognitionParams, fil
             if (continuation.isActive) {
                 continuation.resume(SpeechRecognitionResult(
                     success = false,
-                    text = "Setting up offline speech recognition..."
+                    text = "Model not initialized"
                 ))
             }
             return@suspendCancellableCoroutine
@@ -228,6 +228,7 @@ private fun performFileBasedRecognition(
             if (continuation.isActive) {
                 continuation.resume(SpeechRecognitionResult(
                     success = false,
+                    eventSuccess = false,
                     text = "Error processing audio file: ${e.message}"
                 ))
             }
