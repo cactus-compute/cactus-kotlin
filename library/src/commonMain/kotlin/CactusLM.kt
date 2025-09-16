@@ -13,7 +13,7 @@ class CactusLM {
     suspend fun downloadModel(
         model: String = _lastDownloadedModel
     ): Boolean {
-        if (_isModelDownloaded(model)) {
+        if (modelExists(model)) {
             return true
         }
         val currentModel  = getModel(model) ?: run {
@@ -148,16 +148,6 @@ class CactusLM {
             }
         }
         return models
-    }
-
-    suspend fun _isModelDownloaded(
-        modelName: String = _lastDownloadedModel
-    ): Boolean {
-        val currentModel = getModel(modelName) ?: run {
-            println("No data found for model: $_lastDownloadedModel")
-            return false
-        }
-        return modelExists(currentModel.slug)
     }
 
     private suspend fun getModel(slug: String): CactusModel? {

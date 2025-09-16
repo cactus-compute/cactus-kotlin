@@ -19,13 +19,21 @@ class CactusSTT {
     suspend fun download(
         model: String = lastDownloadedModelName
     ): Boolean {
+        if (modelExists(model) && modelExists(spkModelFolder)) {
+            return true
+        }
         val currentModel  = getModel(model) ?: run {
             println("No data found for model: $model")
             return false
         }
-        val modelTask = DownloadTask(currentModel.url, currentModel.file_name + ".zip", model)
-        val spkModelTask = DownloadTask(spkModelUrl, spkModelFolder + ".zip", spkModelFolder)
-        val success = downloadAndExtractModels(listOf(modelTask, spkModelTask))
+        val tasks = mutableListOf<DownloadTask>()
+        if(!modelExists(currentModel.file_name)) {
+            DownloadTask(currentModel.url, "${currentModel.file_name}.zip", model)
+        }
+        if(!modelExists(spkModelFolder)) {
+            tasks.add(DownloadTask(spkModelUrl, "$spkModelFolder.zip", spkModelFolder))
+        }
+        val success = downloadAndExtractModels(tasks)
         if (success) {
             lastDownloadedModelName = model
         }
