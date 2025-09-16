@@ -1,6 +1,5 @@
 package com.cactus
 
-import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 
 typealias CactusTokenCallback = (String) -> Boolean
@@ -24,7 +23,8 @@ data class CactusCompletionResult(
     val tokensPerSecond: Double? = null,
     val prefillTokens: Int? = null,
     val decodeTokens: Int? = null,
-    val totalTokens: Int? = null
+    val totalTokens: Int? = null,
+    val toolCalls: List<ToolCall>? = emptyList(),
 )
 
 data class CactusEmbeddingResult(
@@ -78,6 +78,13 @@ data class SpeechRecognitionResult(
     val success: Boolean,
     val text: String? = null,
     val processingTime: Double? = null
+)
+
+
+@Serializable
+data class ToolCall(
+    val name: String,
+    val arguments: Map<String, String>
 )
 
 sealed class SpeechError : Exception() {

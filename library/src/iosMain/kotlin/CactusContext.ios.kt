@@ -6,6 +6,7 @@ import kotlinx.cinterop.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import platform.CoreCrypto.CC_SHA1
@@ -135,6 +136,9 @@ actual object CactusContext {
                     val prefillTokens = jsonResponse["prefill_tokens"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
                     val decodeTokens = jsonResponse["decode_tokens"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
                     val totalTokens = jsonResponse["total_tokens"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                    val toolCalls = jsonResponse["tool_calls"]?.let { element ->
+                        json.decodeFromJsonElement<List<ToolCall>>(element)
+                    } ?: emptyList()
 
                     CactusCompletionResult(
                         success = success,
@@ -144,30 +148,19 @@ actual object CactusContext {
                         tokensPerSecond = tokensPerSecond,
                         prefillTokens = prefillTokens,
                         decodeTokens = decodeTokens,
-                        totalTokens = totalTokens
+                        totalTokens = totalTokens,
+                        toolCalls = toolCalls
                     )
                 } catch (e: Exception) {
                     CactusCompletionResult(
                         success = false,
-                        response = "Error: Unable to parse the response",
-                        timeToFirstTokenMs = 0.0,
-                        totalTimeMs = 0.0,
-                        tokensPerSecond = 0.0,
-                        prefillTokens = 0,
-                        decodeTokens = 0,
-                        totalTokens = 0
+                        response = "Error: Unable to parse the response"
                     )
                 }
             } else {
                 CactusCompletionResult(
                     success = false,
-                    response = "Error: completion failed with code $result",
-                    timeToFirstTokenMs = 0.0,
-                    totalTimeMs = 0.0,
-                    tokensPerSecond = 0.0,
-                    prefillTokens = 0,
-                    decodeTokens = 0,
-                    totalTokens = 0
+                    response = "Error: completion failed with code $result"
                 )
             }
         }

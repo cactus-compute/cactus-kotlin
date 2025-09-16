@@ -4,6 +4,7 @@ import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromJsonElement
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import java.security.MessageDigest
@@ -123,14 +124,7 @@ actual object CactusContext {
                 val jsonResponse = json.parseToJsonElement(responseText).jsonObject
                 val success =
                     jsonResponse["success"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true
-                
-                // Use streaming response if we have it, otherwise use the response from buffer
-                val response = if (onToken != null && fullResponse.isNotEmpty()) {
-                    fullResponse.toString()
-                } else {
-                    jsonResponse["response"]?.jsonPrimitive?.content ?: responseText
-                }
-                
+                val response = jsonResponse["response"]?.jsonPrimitive?.content ?: responseText
                 val timeToFirstTokenMs =
                     jsonResponse["time_to_first_token_ms"]?.jsonPrimitive?.content?.toDoubleOrNull()
                         ?: 0.0
@@ -145,6 +139,9 @@ actual object CactusContext {
                     jsonResponse["decode_tokens"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
                 val totalTokens =
                     jsonResponse["total_tokens"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
+                val toolCalls = jsonResponse["tool_calls"]?.let { element ->
+                    json.decodeFromJsonElement<List<ToolCall>>(element)
+                } ?: emptyList()
 
                 CactusCompletionResult(
                     success = success,
@@ -154,31 +151,20 @@ actual object CactusContext {
                     tokensPerSecond = tokensPerSecond,
                     prefillTokens = prefillTokens,
                     decodeTokens = decodeTokens,
-                    totalTokens = totalTokens
+                    totalTokens = totalTokens,
+                    toolCalls = toolCalls
                 )
             } catch (e: Exception) {
                 Log.e("Cactus", "Unable to parse the response json", e)
                 CactusCompletionResult(
                     success = false,
-                    response = "Error: Unable to parse the response",
-                    timeToFirstTokenMs = 0.0,
-                    totalTimeMs = 0.0,
-                    tokensPerSecond = 0.0,
-                    prefillTokens = 0,
-                    decodeTokens = 0,
-                    totalTokens = 0
+                    response = "Error: Unable to parse the response"
                 )
             }
         } else {
             CactusCompletionResult(
                 success = false,
-                response = "Error: completion failed with code $result",
-                timeToFirstTokenMs = 0.0,
-                totalTimeMs = 0.0,
-                tokensPerSecond = 0.0,
-                prefillTokens = 0,
-                decodeTokens = 0,
-                totalTokens = 0
+                response = "Error: completion failed with code $result"
             )
         }
     }
