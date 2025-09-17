@@ -128,7 +128,6 @@ val result = lm.generateCompletion(
 
 ### Function Calling (Experimental)
 ```kotlin
-import com.cactus.models.Tool
 import com.cactus.models.ToolParameter
 import com.cactus.models.createTool
 
@@ -141,11 +140,6 @@ val tools = listOf(
                 type = "string", 
                 description = "City name", 
                 required = true
-            ),
-            "units" to ToolParameter(
-                type = "string", 
-                description = "Temperature units (celsius/fahrenheit)", 
-                required = false
             )
         )
     )
@@ -153,8 +147,10 @@ val tools = listOf(
 
 val result = lm.generateCompletion(
     messages = listOf(ChatMessage("What's the weather in New York?", "user")),
-    params = CactusCompletionParams(maxTokens = 100),
-    tools = tools
+    params = CactusCompletionParams(
+        maxTokens = 100,
+        tools = tools
+    )
 )
 ```
 
@@ -169,14 +165,14 @@ lm.getModels()
 #### CactusLM Class
 - `suspend fun downloadModel(model: String = "qwen3-0.6"): Boolean` - Download a model
 - `suspend fun initializeModel(params: CactusInitParams): Boolean` - Initialize model for inference
-- `suspend fun generateCompletion(messages: List<ChatMessage>, params: CactusCompletionParams, tools: List<Tool>? = null, onToken: CactusStreamingCallback? = null): CactusCompletionResult?` - Generate text completion
+- `suspend fun generateCompletion(messages: List<ChatMessage>, params: CactusCompletionParams, onToken: CactusStreamingCallback? = null): CactusCompletionResult?` - Generate text completion
 - `fun unload()` - Free model from memory
 - `suspend fun getModels(): List<CactusModel>` - Get available LLM models
 - `fun isLoaded(): Boolean` - Check if model is loaded
 
 #### Data Classes
 - `CactusInitParams(model: String?, contextSize: Int?)` - Model initialization parameters
-- `CactusCompletionParams(temperature: Double, topK: Int, topP: Double, maxTokens: Int, stopSequences: List<String>, bufferSize: Int)` - Completion parameters
+- `CactusCompletionParams(temperature: Double, topK: Int, topP: Double, maxTokens: Int, stopSequences: List<String>, bufferSize: Int, tools: List<Tool>?)` - Completion parameters
 - `ChatMessage(content: String, role: String, timestamp: Long?)` - Chat message format
 - `CactusCompletionResult` - Contains response, timing metrics, and success status
 - `CactusEmbeddingResult(success: Boolean, embeddings: List<Double>, dimension: Int, errorMessage: String?)` - Embedding generation result

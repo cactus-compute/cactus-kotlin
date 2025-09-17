@@ -158,8 +158,15 @@ fun App() {
                 val resp = lm.generateCompletion(
                     messages = listOf(ChatMessage("What's the weather in New York?", "user")),
                     params = CactusCompletionParams(
-                        maxTokens = 200,
-                        temperature = 0.1
+                        tools = listOf(
+                            createTool(
+                                name = "get_weather",
+                                description = "Get weather for a location",
+                                parameters = mapOf(
+                                    "location" to ToolParameter("string", "City name", true)
+                                )
+                            )
+                        ),
                     ),
                     onToken = { token, tokenId ->
                         if(firstToken) {
@@ -168,15 +175,6 @@ fun App() {
                         }
                         lastResponse += token
                     },
-                    tools = listOf(
-                        createTool(
-                            name = "get_weather",
-                            description = "Get weather for a location",
-                            parameters = mapOf(
-                                "location" to ToolParameter("string", "City name", true)
-                            )
-                        )
-                    ),
                 )
 
                 if (resp != null && resp.success) {

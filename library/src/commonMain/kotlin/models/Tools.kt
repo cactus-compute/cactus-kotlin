@@ -19,33 +19,39 @@ data class ToolParametersSchema(
 )
 
 @Serializable
-data class ToolFunction(
+data class CactusFunction(
     val name: String,
     val description: String,
     val parameters: ToolParametersSchema
 )
 
 @Serializable
-data class Tool(
+data class CactusTool(
     val type: String = "function",
-    val function: ToolFunction
+    val function: CactusFunction
 )
 
-fun List<Tool>.toToolsJson(): String {
-    return Json.encodeToString(ListSerializer(Tool.serializer()), this)
+@Serializable
+data class ToolCall(
+    val name: String,
+    val arguments: Map<String, String>
+)
+
+fun List<CactusTool>.toToolsJson(): String {
+    return Json.encodeToString(ListSerializer(CactusTool.serializer()), this)
 }
 
 fun createTool(
     name: String,
     description: String,
     parameters: Map<String, ToolParameter>
-): Tool {
+): CactusTool {
     val required = parameters.entries
         .filter { (_, param) -> param.required }
         .map { (key, _) -> key }
 
-    return Tool(
-        function = ToolFunction(
+    return CactusTool(
+        function = CactusFunction(
             name = name,
             description = description,
             parameters = ToolParametersSchema(

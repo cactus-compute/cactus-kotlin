@@ -1,18 +1,20 @@
 package com.cactus
 
 import kotlinx.serialization.Serializable
+import com.cactus.models.CactusTool
 
 typealias CactusTokenCallback = (String) -> Boolean
 typealias CactusProgressCallback = (Double?, String, Boolean) -> Unit
 typealias CactusStreamingCallback = (token: String, tokenId: UInt) -> Unit
 
 data class CactusCompletionParams(
-    val temperature: Double = 0.8,
+    val temperature: Double = 0.1,
     val topK: Int = 40,
     val topP: Double = 0.95,
-    val maxTokens: Int = 1024,
+    val maxTokens: Int = 200,
     val stopSequences: List<String> = emptyList(),
-    val bufferSize: Int = 1024
+    val bufferSize: Int = 1024,
+    val tools: List<CactusTool> = emptyList()
 )
 
 data class CactusCompletionResult(
