@@ -18,25 +18,37 @@ struct CallbackData {
 void token_callback_bridge(const char* token, uint32_t token_id, void* user_data) {
     CallbackData* data = static_cast<CallbackData*>(user_data);
     if (data && data->env && data->callback) {
-        jstring jtoken = data->env->NewStringUTF(token);
+        JNIEnv* env = data->env;
         
+        size_t len = strlen(token);
+        jbyteArray byte_array = env->NewByteArray(len);
+        env->SetByteArrayRegion(byte_array, 0, len, reinterpret_cast<const jbyte*>(token));
+
+        jclass string_class = env->FindClass("java/lang/String");
+        jmethodID ctor = env->GetMethodID(string_class, "<init>", "([BLjava/lang/String;)V");
+        jstring charset_name = env->NewStringUTF("UTF-8");
+        jstring jtoken = (jstring) env->NewObject(string_class, ctor, byte_array, charset_name);
+
         // Box the integer for Kotlin function call
-        jclass integer_class = data->env->FindClass("java/lang/Integer");
-        jmethodID integer_valueOf = data->env->GetStaticMethodID(integer_class, "valueOf", "(I)Ljava/lang/Integer;");
-        jobject jtoken_id = data->env->CallStaticObjectMethod(integer_class, integer_valueOf, static_cast<jint>(token_id));
-        
+        jclass integer_class = env->FindClass("java/lang/Integer");
+        jmethodID integer_valueOf = env->GetStaticMethodID(integer_class, "valueOf", "(I)Ljava/lang/Integer;");
+        jobject jtoken_id = env->CallStaticObjectMethod(integer_class, integer_valueOf, static_cast<jint>(token_id));
+
         // Call the Kotlin function using the Function2.invoke method
-        data->env->CallObjectMethod(data->callback, data->invoke_method, jtoken, jtoken_id);
-        
+        env->CallObjectMethod(data->callback, data->invoke_method, jtoken, jtoken_id);
+
         // Clear any exceptions
-        if (data->env->ExceptionCheck()) {
-            data->env->ExceptionDescribe();
-            data->env->ExceptionClear();
+        if (env->ExceptionCheck()) {
+            env->ExceptionDescribe();
+            env->ExceptionClear();
         }
-        
-        data->env->DeleteLocalRef(jtoken);
-        data->env->DeleteLocalRef(jtoken_id);
-        data->env->DeleteLocalRef(integer_class);
+
+        env->DeleteLocalRef(jtoken);
+        env->DeleteLocalRef(jtoken_id);
+        env->DeleteLocalRef(integer_class);
+        env->DeleteLocalRef(byte_array);
+        env->DeleteLocalRef(string_class);
+        env->DeleteLocalRef(charset_name);
     }
 }
 
