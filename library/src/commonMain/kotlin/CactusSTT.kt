@@ -28,7 +28,7 @@ class CactusSTT {
         }
         val tasks = mutableListOf<DownloadTask>()
         if(!modelExists(currentModel.file_name)) {
-            DownloadTask(currentModel.url, "${currentModel.file_name}.zip", model)
+            tasks.add(DownloadTask(currentModel.url, "${currentModel.file_name}.zip", model))
         }
         if(!modelExists(spkModelFolder)) {
             tasks.add(DownloadTask(spkModelUrl, "$spkModelFolder.zip", spkModelFolder))
