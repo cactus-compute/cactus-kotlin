@@ -3,11 +3,13 @@ package com.cactus
 import com.cactus.services.Supabase
 import com.cactus.services.Telemetry
 import kotlin.time.TimeSource
+import com.cactus.WisprFlow
 
 class CactusSTT {
     private var isInitialized = false
     private var lastDownloadedModelName: String = "vosk-en-us"
     private val timeSource = TimeSource.Monotonic
+    private val wisprFlow = WisprFlow()
 
 
     // spk model is universal, no need to change it for different languages
@@ -62,10 +64,19 @@ class CactusSTT {
         return isInitialized
     }
 
-    suspend fun transcribe(params: SpeechRecognitionParams, filePath: String? = null): SpeechRecognitionResult? {
+    suspend fun transcribe(
+        params: SpeechRecognitionParams,
+        filePath: String? = null,
+        mode: TranscriptionMode = TranscriptionMode.LOCAL,
+        apiKey: String?
+    ): SpeechRecognitionResult? {
         if (isInitialized) {
             val startTime = timeSource.markNow()
-            val result = performSTT(params, filePath)
+            var result = performSTT(params, filePath)
+            if (result?.success == false && filePath != null && mode == TranscriptionMode.HYBRID && apiKey != null) {
+                println("Falling back to WisprFlow")
+                result = wisprFlow.transcribe(filePath, apiKey)
+            }
             if (Telemetry.isInitialized) {
                 Telemetry.instance?.logTranscription(
                     CactusCompletionResult(

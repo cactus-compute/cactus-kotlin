@@ -107,3 +107,7 @@ sealed class SpeechState {
     data class Result(val result: SpeechRecognitionResult) : SpeechState()
     data class Error(val error: SpeechError) : SpeechState()
 }
+
+enum class TranscriptionMode {
+    LOCAL, HYBRID
+}
