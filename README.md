@@ -267,6 +267,20 @@ runBlocking {
 }
 ```
 
+### Hybrid Transcription with Wispr Fallback
+
+For file-based transcriptions, `CactusSTT` supports a hybrid mode. If local transcription fails, it can automatically fall back to the cloud-based Wispr API for more robust results. To enable this, set the `mode` to `TranscriptionMode.HYBRID` and provide your Wispr `apiKey`.
+
+```kotlin
+// Transcribe from audio file with Wispr fallback
+val fileResult = stt.transcribe(
+    params = SpeechRecognitionParams(),
+    filePath = "/path/to/audio.wav",
+    mode = TranscriptionMode.HYBRID,
+    apiKey = "your_wispr_api_key"
+)
+```
+
 ### Available Voice Models
 ```kotlin
 // Get list of available voice models
@@ -281,7 +295,7 @@ stt.isModelDownloaded("vosk-en-us")
 #### CactusSTT Class
 - `suspend fun download(model: String = "vosk-en-us"): Boolean` - Download STT model
 - `suspend fun init(model: String?): Boolean` - Initialize STT model
-- `suspend fun transcribe(params: SpeechRecognitionParams, filePath: String? = null): SpeechRecognitionResult?` - Transcribe speech
+- `suspend fun transcribe(params: SpeechRecognitionParams, filePath: String? = null, mode: TranscriptionMode = TranscriptionMode.LOCAL, apiKey: String?): SpeechRecognitionResult?` - Transcribe speech. For file-based transcription, supports a hybrid mode which falls back to the Wispr API if local transcription fails.
 - `fun stop()` - Stop ongoing transcription
 - `fun isReady(): Boolean` - Check if STT is ready
 - `suspend fun getVoiceModels(): List<VoiceModel>` - Get available voice models
