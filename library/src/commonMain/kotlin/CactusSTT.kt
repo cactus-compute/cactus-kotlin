@@ -68,7 +68,7 @@ class CactusSTT {
         params: SpeechRecognitionParams,
         filePath: String? = null,
         mode: TranscriptionMode = TranscriptionMode.LOCAL,
-        apiKey: String?
+        apiKey: String? = null
     ): SpeechRecognitionResult? {
         val startTime = timeSource.markNow()
         var result: SpeechRecognitionResult?
@@ -134,6 +134,10 @@ class CactusSTT {
         }
 
         return result
+    }
+
+    suspend fun warmUpWispr(apiKey: String) {
+        wisprFlow.warmUp(apiKey)
     }
 
     fun stop() {

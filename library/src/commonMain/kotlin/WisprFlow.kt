@@ -32,7 +32,31 @@ class WisprFlow {
         }
     }
 
+    private var warmedUp = false
+
+    suspend fun warmUp(apiKey: String) {
+        try {
+            val response = client.get("https://api.wisprflow.ai/api/v1/dash/warmup_dash") {
+                contentType(ContentType.Application.Json)
+                header(HttpHeaders.Authorization, "Bearer $apiKey")
+            }
+            if (response.status == HttpStatusCode.OK) {
+                println("WisprFlow API warmed up.")
+                warmedUp = true
+            } else {
+                val errorBody = response.body<String>()
+                println("Error from WisprFlow API during warm-up: ${response.status} - $errorBody")
+            }
+        } catch (e: Exception) {
+            println("Error during WisprFlow warm-up: ${e.message}")
+            e.printStackTrace()
+        }
+    }
+
     suspend fun transcribe(filePath: String, apiKey: String): SpeechRecognitionResult? {
+        if (!warmedUp) {
+            warmUp(apiKey)
+        }
         var result: SpeechRecognitionResult? = null
         try {
             val fileSystem = getOkioFileSystem()
