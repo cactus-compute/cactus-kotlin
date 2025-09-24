@@ -3,11 +3,13 @@ package com.cactus
 import com.cactus.services.Supabase
 import com.cactus.services.Telemetry
 import kotlin.time.TimeSource
+import com.cactus.WisprFlow
 
 class CactusSTT {
     private var isInitialized = false
     private var lastDownloadedModelName: String = "vosk-en-us"
     private val timeSource = TimeSource.Monotonic
+    private val wisprFlow = WisprFlow()
 
 
     // spk model is universal, no need to change it for different languages
@@ -62,33 +64,80 @@ class CactusSTT {
         return isInitialized
     }
 
-    suspend fun transcribe(params: SpeechRecognitionParams, filePath: String? = null): SpeechRecognitionResult? {
-        if (isInitialized) {
-            val startTime = timeSource.markNow()
-            val result = performSTT(params, filePath)
-            if (Telemetry.isInitialized) {
-                Telemetry.instance?.logTranscription(
-                    CactusCompletionResult(
-                        success = result?.eventSuccess == true,
-                        totalTimeMs = result?.processingTime
-                    ),
-                    CactusInitParams(model = lastDownloadedModelName),
-                    message = if (result?.success == false) result.text else null,
-                    responseTime = startTime.elapsedNow().inWholeMilliseconds.toDouble()
-                )
+    suspend fun transcribe(
+        params: SpeechRecognitionParams = SpeechRecognitionParams(),
+        filePath: String? = null,
+        mode: TranscriptionMode = TranscriptionMode.LOCAL,
+        apiKey: String? = null
+    ): SpeechRecognitionResult? {
+        val startTime = timeSource.markNow()
+        var result: SpeechRecognitionResult?
+
+        val localTranscribe = suspend {
+            if (isInitialized) {
+                performSTT(params, filePath)
+            } else {
+                println("Local STT not initialized.")
+                null
             }
-            return result
         }
+
+        val remoteTranscribe = suspend {
+            if (filePath != null && apiKey != null) {
+                wisprFlow.transcribe(filePath, apiKey)
+            } else {
+                println("Remote transcription requires filePath and apiKey.")
+                null
+            }
+        }
+
+        when (mode) {
+            TranscriptionMode.LOCAL -> {
+                result = localTranscribe()
+            }
+            TranscriptionMode.REMOTE -> {
+                result = remoteTranscribe()
+            }
+            TranscriptionMode.LOCAL_FIRST -> {
+                result = localTranscribe()
+                if (result?.success != true) {
+                    println("Local transcription failed or unavailable, trying remote.")
+                    result = remoteTranscribe()
+                }
+            }
+            TranscriptionMode.REMOTE_FIRST -> {
+                result = remoteTranscribe()
+                if (result?.success != true) {
+                    println("Remote transcription failed or unavailable, trying local.")
+                    result = localTranscribe()
+                }
+            }
+        }
+
+        val message: String? = if (result == null) {
+            "Transcription failed"
+        } else {
+            if (result.success) null else result.text
+        }
+
         if (Telemetry.isInitialized) {
             Telemetry.instance?.logTranscription(
                 CactusCompletionResult(
-                    success = false,
+                    success = result?.eventSuccess == true,
+                    totalTimeMs = result?.processingTime
                 ),
                 CactusInitParams(model = lastDownloadedModelName),
-                message = "STT not initialized"
+                message = message,
+                responseTime = startTime.elapsedNow().inWholeMilliseconds.toDouble(),
+                mode = mode
             )
         }
-        return null
+
+        return result
+    }
+
+    suspend fun warmUpWispr(apiKey: String) {
+        wisprFlow.warmUp(apiKey)
     }
 
     fun stop() {

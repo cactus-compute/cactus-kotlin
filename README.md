@@ -154,6 +154,27 @@ val result = lm.generateCompletion(
 )
 ```
 
+### Inference Modes
+
+The `generateCompletion` method supports different inference modes through the `mode` parameter, which takes an `InferenceMode` enum value. This allows you to control whether the completion is generated locally on the device or remotely using a compatible API.
+
+- `InferenceMode.LOCAL`: (Default) Generates the completion using the local on-device model.
+- `InferenceMode.REMOTE`: Generates the completion using a remote API. Requires an `apiKey`.
+- `InferenceMode.LOCAL_FIRST`: Attempts to generate the completion locally first. If it fails, it falls back to the remote API.
+- `InferenceMode.REMOTE_FIRST`: Attempts to generate the completion remotely first. If it fails, it falls back to the local on-device model.
+
+**Example using a remote-first strategy:**
+```kotlin
+val result = lm.generateCompletion(
+    messages = listOf(ChatMessage("What's the weather in New York?", "user")),
+    params = CactusCompletionParams(
+        maxTokens = 100,
+        mode = InferenceMode.REMOTE_FIRST,
+        cactusToken = "your_cactus_token"
+    ),
+)
+```
+
 ### Available Models
 You can get a list of available models:
 ```kotlin
@@ -165,14 +186,14 @@ lm.getModels()
 #### CactusLM Class
 - `suspend fun downloadModel(model: String = "qwen3-0.6"): Boolean` - Download a model
 - `suspend fun initializeModel(params: CactusInitParams): Boolean` - Initialize model for inference
-- `suspend fun generateCompletion(messages: List<ChatMessage>, params: CactusCompletionParams, onToken: CactusStreamingCallback? = null): CactusCompletionResult?` - Generate text completion
+- `suspend fun generateCompletion(messages: List<ChatMessage>, params: CactusCompletionParams, onToken: CactusStreamingCallback? = null): CactusCompletionResult?` - Generate text completion. Supports different inference modes (local, remote, and fallbacks).
 - `fun unload()` - Free model from memory
 - `suspend fun getModels(): List<CactusModel>` - Get available LLM models
 - `fun isLoaded(): Boolean` - Check if model is loaded
 
 #### Data Classes
 - `CactusInitParams(model: String?, contextSize: Int?)` - Model initialization parameters
-- `CactusCompletionParams(temperature: Double, topK: Int, topP: Double, maxTokens: Int, stopSequences: List<String>, bufferSize: Int, tools: List<Tool>?)` - Completion parameters
+- `CactusCompletionParams(temperature: Double, topK: Int, topP: Double, maxTokens: Int, stopSequences: List<String>, bufferSize: Int, tools: List<Tool>?, mode: InferenceMode, cactusToken: String)` - Completion parameters
 - `ChatMessage(content: String, role: String, timestamp: Long?)` - Chat message format
 - `CactusCompletionResult` - Contains response, timing metrics, and success status
 - `CactusEmbeddingResult(success: Boolean, embeddings: List<Double>, dimension: Int, errorMessage: String?)` - Embedding generation result
@@ -267,6 +288,26 @@ runBlocking {
 }
 ```
 
+### Transcription Modes
+
+`CactusSTT` supports multiple transcription modes for flexibility between on-device and cloud-based processing. This is controlled by the `mode` parameter in the `transcribe` function.
+
+- `TranscriptionMode.LOCAL`: (Default) Performs transcription locally on the device.
+- `TranscriptionMode.REMOTE`: Performs transcription using a remote API (e.g., Wispr). Requires `filePath` and `apiKey`.
+- `TranscriptionMode.LOCAL_FIRST`: Attempts local transcription first. If it fails, it falls back to the remote API.
+- `TranscriptionMode.REMOTE_FIRST`: Attempts remote transcription first. If it fails, it falls back to the local model.
+
+**Example using local-first fallback for a file:**
+```kotlin
+// Transcribe from audio file with remote fallback
+val fileResult = stt.transcribe(
+    params = SpeechRecognitionParams(),
+    filePath = "/path/to/audio.wav",
+    mode = TranscriptionMode.LOCAL_FIRST,
+    apiKey = "your_wispr_api_key"
+)
+```
+
 ### Available Voice Models
 ```kotlin
 // Get list of available voice models
@@ -281,7 +322,8 @@ stt.isModelDownloaded("vosk-en-us")
 #### CactusSTT Class
 - `suspend fun download(model: String = "vosk-en-us"): Boolean` - Download STT model
 - `suspend fun init(model: String?): Boolean` - Initialize STT model
-- `suspend fun transcribe(params: SpeechRecognitionParams, filePath: String? = null): SpeechRecognitionResult?` - Transcribe speech
+- `suspend fun transcribe(params: SpeechRecognitionParams = SpeechRecognitionParams(), filePath: String? = null, mode: TranscriptionMode = TranscriptionMode.LOCAL, apiKey: String? = null): SpeechRecognitionResult?` - Transcribe speech. Supports different transcription modes (local, remote, and fallbacks).
+- `suspend fun warmUpWispr(apiKey: String)` - Warms up the remote Wispr service for lower latency.
 - `fun stop()` - Stop ongoing transcription
 - `fun isReady(): Boolean` - Check if STT is ready
 - `suspend fun getVoiceModels(): List<VoiceModel>` - Get available voice models

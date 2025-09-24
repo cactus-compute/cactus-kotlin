@@ -3,6 +3,8 @@ package com.cactus.services
 import com.cactus.CactusCompletionResult
 import com.cactus.CactusEmbeddingResult
 import com.cactus.CactusInitParams
+import com.cactus.InferenceMode
+import com.cactus.TranscriptionMode
 import com.cactus.models.LogRecord
 import com.cactus.utils.getDeviceId
 import com.cactus.utils.getDeviceMetadata
@@ -69,6 +71,8 @@ class Telemetry private constructor(
         result: CactusCompletionResult?,
         options: CactusInitParams,
         message: String? = null,
+        responseTime: Double? = null,
+        mode: InferenceMode? = null
     ) {
         val record = LogRecord(
             eventType = "completion",
@@ -76,12 +80,13 @@ class Telemetry private constructor(
             deviceId = deviceId,
             ttft = result?.timeToFirstTokenMs,
             tps = result?.tokensPerSecond,
-            responseTime = result?.totalTimeMs,
+            responseTime = responseTime,
             model = options.model,
             tokens = result?.totalTokens,
             success = result?.success,
             message = message,
-            telemetryToken = cactusTelemetryToken
+            telemetryToken = cactusTelemetryToken,
+            mode = mode?.toString()
         )
 
         Supabase.sendLogRecord(record)
@@ -91,7 +96,8 @@ class Telemetry private constructor(
         result: CactusCompletionResult?,
         options: CactusInitParams,
         message: String? = null,
-        responseTime: Double? = null
+        responseTime: Double? = null,
+        mode: TranscriptionMode
     ) {
         val record = LogRecord(
             eventType = "transcription",
@@ -102,7 +108,8 @@ class Telemetry private constructor(
             success = result?.success,
             telemetryToken = cactusTelemetryToken,
             message = message,
-            audioDuration = result?.totalTimeMs?.toLong()
+            audioDuration = result?.totalTimeMs?.toLong(),
+            mode = mode.toString()
         )
 
         Supabase.sendLogRecord(record)

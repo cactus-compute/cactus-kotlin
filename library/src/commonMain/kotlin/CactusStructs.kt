@@ -14,7 +14,9 @@ data class CactusCompletionParams(
     val maxTokens: Int = 200,
     val stopSequences: List<String> = emptyList(),
     val bufferSize: Int = 1024,
-    val tools: List<CactusTool> = emptyList()
+    val tools: List<CactusTool> = emptyList(),
+    val mode: InferenceMode = InferenceMode.LOCAL,
+    val cactusToken: String? = null
 )
 
 data class CactusCompletionResult(
@@ -36,6 +38,7 @@ data class CactusEmbeddingResult(
     val errorMessage: String? = null
 )
 
+@Serializable
 data class ChatMessage(
     val content: String,
     val role: String,
@@ -106,4 +109,12 @@ sealed class SpeechState {
     object Processing : SpeechState()
     data class Result(val result: SpeechRecognitionResult) : SpeechState()
     data class Error(val error: SpeechError) : SpeechState()
+}
+
+enum class TranscriptionMode {
+    LOCAL, REMOTE, LOCAL_FIRST, REMOTE_FIRST
+}
+
+enum class InferenceMode {
+    LOCAL, REMOTE, LOCAL_FIRST, REMOTE_FIRST
 }
