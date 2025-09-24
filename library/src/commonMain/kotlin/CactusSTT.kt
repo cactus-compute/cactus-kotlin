@@ -65,7 +65,7 @@ class CactusSTT {
     }
 
     suspend fun transcribe(
-        params: SpeechRecognitionParams,
+        params: SpeechRecognitionParams = SpeechRecognitionParams(),
         filePath: String? = null,
         mode: TranscriptionMode = TranscriptionMode.LOCAL,
         apiKey: String? = null
