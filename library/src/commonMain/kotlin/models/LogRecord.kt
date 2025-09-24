@@ -21,6 +21,7 @@ data class LogRecord(
     val message: String? = null,
     @SerialName("telemetry_token") val telemetryToken: String?,
     @SerialName("audio_duration") val audioDuration: Long? = null,
+    val mode: String? = null,
 )
 
 @Serializable

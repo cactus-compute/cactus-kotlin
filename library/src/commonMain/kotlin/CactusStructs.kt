@@ -109,5 +109,5 @@ sealed class SpeechState {
 }
 
 enum class TranscriptionMode {
-    LOCAL, HYBRID
+    LOCAL, REMOTE, LOCAL_FIRST, REMOTE_FIRST
 }

@@ -70,36 +70,70 @@ class CactusSTT {
         mode: TranscriptionMode = TranscriptionMode.LOCAL,
         apiKey: String?
     ): SpeechRecognitionResult? {
-        if (isInitialized) {
-            val startTime = timeSource.markNow()
-            var result = performSTT(params, filePath)
-            if (result?.success == false && filePath != null && mode == TranscriptionMode.HYBRID && apiKey != null) {
-                println("Falling back to WisprFlow")
-                result = wisprFlow.transcribe(filePath, apiKey)
+        val startTime = timeSource.markNow()
+        var result: SpeechRecognitionResult?
+
+        val localTranscribe = suspend {
+            if (isInitialized) {
+                performSTT(params, filePath)
+            } else {
+                println("Local STT not initialized.")
+                null
             }
-            if (Telemetry.isInitialized) {
-                Telemetry.instance?.logTranscription(
-                    CactusCompletionResult(
-                        success = result?.eventSuccess == true,
-                        totalTimeMs = result?.processingTime
-                    ),
-                    CactusInitParams(model = lastDownloadedModelName),
-                    message = if (result?.success == false) result.text else null,
-                    responseTime = startTime.elapsedNow().inWholeMilliseconds.toDouble()
-                )
-            }
-            return result
         }
+
+        val remoteTranscribe = suspend {
+            if (filePath != null && apiKey != null) {
+                wisprFlow.transcribe(filePath, apiKey)
+            } else {
+                println("Remote transcription requires filePath and apiKey.")
+                null
+            }
+        }
+
+        when (mode) {
+            TranscriptionMode.LOCAL -> {
+                result = localTranscribe()
+            }
+            TranscriptionMode.REMOTE -> {
+                result = remoteTranscribe()
+            }
+            TranscriptionMode.LOCAL_FIRST -> {
+                result = localTranscribe()
+                if (result?.success != true) {
+                    println("Local transcription failed or unavailable, trying remote.")
+                    result = remoteTranscribe()
+                }
+            }
+            TranscriptionMode.REMOTE_FIRST -> {
+                result = remoteTranscribe()
+                if (result?.success != true) {
+                    println("Remote transcription failed or unavailable, trying local.")
+                    result = localTranscribe()
+                }
+            }
+        }
+
+        val message: String? = if (result == null) {
+            "Transcription failed"
+        } else {
+            if (result.success) null else result.text
+        }
+
         if (Telemetry.isInitialized) {
             Telemetry.instance?.logTranscription(
                 CactusCompletionResult(
-                    success = false,
+                    success = result?.eventSuccess == true,
+                    totalTimeMs = result?.processingTime
                 ),
                 CactusInitParams(model = lastDownloadedModelName),
-                message = "STT not initialized"
+                message = message,
+                responseTime = startTime.elapsedNow().inWholeMilliseconds.toDouble(),
+                mode = mode
             )
         }
-        return null
+
+        return result
     }
 
     fun stop() {

@@ -3,6 +3,7 @@ package com.cactus.services
 import com.cactus.CactusCompletionResult
 import com.cactus.CactusEmbeddingResult
 import com.cactus.CactusInitParams
+import com.cactus.TranscriptionMode
 import com.cactus.models.LogRecord
 import com.cactus.utils.getDeviceId
 import com.cactus.utils.getDeviceMetadata
@@ -91,7 +92,8 @@ class Telemetry private constructor(
         result: CactusCompletionResult?,
         options: CactusInitParams,
         message: String? = null,
-        responseTime: Double? = null
+        responseTime: Double? = null,
+        mode: TranscriptionMode
     ) {
         val record = LogRecord(
             eventType = "transcription",
@@ -102,7 +104,8 @@ class Telemetry private constructor(
             success = result?.success,
             telemetryToken = cactusTelemetryToken,
             message = message,
-            audioDuration = result?.totalTimeMs?.toLong()
+            audioDuration = result?.totalTimeMs?.toLong(),
+            mode = mode.toString()
         )
 
         Supabase.sendLogRecord(record)
