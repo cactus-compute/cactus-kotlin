@@ -48,9 +48,7 @@ class CactusLM {
     suspend fun generateCompletion(
         messages: List<ChatMessage>,
         params: CactusCompletionParams,
-        onToken: CactusStreamingCallback? = null,
-        mode: InferenceMode = InferenceMode.LOCAL,
-        apiKey: String? = null
+        onToken: CactusStreamingCallback? = null
     ): CactusCompletionResult? {
         val startTime = timeSource.markNow()
         var result: CactusCompletionResult?
@@ -81,15 +79,15 @@ class CactusLM {
         }
 
         val remoteCompletion = suspend {
-            if (apiKey != null) {
-                openRouterModule.generateCompletion(messages, params, apiKey, onToken)
+            if (params.cactusToken != null) {
+                openRouterModule.generateCompletion(messages, params, params.cactusToken, onToken)
             } else {
                 println("Remote inference requires an apiKey.")
                 null
             }
         }
 
-        result = when (mode) {
+        result = when (params.mode) {
             InferenceMode.LOCAL -> localCompletion()
             InferenceMode.REMOTE -> remoteCompletion()
             InferenceMode.LOCAL_FIRST -> {
@@ -112,7 +110,7 @@ class CactusLM {
                 initParams,
                 message = message,
                 responseTime = startTime.elapsedNow().inWholeMilliseconds.toDouble(),
-                mode = mode
+                mode = params.mode
             )
         }
 

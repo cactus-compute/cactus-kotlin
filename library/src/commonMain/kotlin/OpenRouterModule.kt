@@ -69,11 +69,11 @@ class OpenRouterModule {
     suspend fun generateCompletion(
         messages: List<ChatMessage>,
         params: CactusCompletionParams,
-        apiKey: String,
+        cactusToken: String,
         onToken: CactusStreamingCallback? = null
     ): CactusCompletionResult {
         if (onToken != null) {
-            return generateCompletionStream(messages, params, apiKey, onToken)
+            return generateCompletionStream(messages, params, cactusToken, onToken)
         }
 
         val requestBody = OpenRouterRequest(
@@ -89,7 +89,7 @@ class OpenRouterModule {
         try {
             val response = client.post("$baseUrl/chat/completions") {
                 contentType(ContentType.Application.Json)
-                header(HttpHeaders.Authorization, "Bearer $apiKey")
+                header(HttpHeaders.Authorization, "Bearer $cactusToken")
                 header("HTTP-Referer", "https://cactuscompute.com")
                 header("X-Title", "Cactus Kotlin SDK")
                 setBody(json.encodeToString(requestBody))
@@ -128,7 +128,7 @@ class OpenRouterModule {
     private suspend fun generateCompletionStream(
         messages: List<ChatMessage>,
         params: CactusCompletionParams,
-        apiKey: String,
+        cactusToken: String,
         onToken: CactusStreamingCallback
     ): CactusCompletionResult {
         val requestBody = OpenRouterRequest(
@@ -150,7 +150,7 @@ class OpenRouterModule {
         try {
             client.post("$baseUrl/chat/completions") {
                 contentType(ContentType.Application.Json)
-                header(HttpHeaders.Authorization, "Bearer $apiKey")
+                header(HttpHeaders.Authorization, "Bearer $cactusToken")
                 header("HTTP-Referer", "https://cactuscompute.com")
                 header("X-Title", "Cactus Kotlin SDK")
                 setBody(json.encodeToString(requestBody))
