@@ -3,11 +3,14 @@ package com.cactus
 import com.cactus.models.toToolsJson
 import com.cactus.services.Supabase
 import com.cactus.services.Telemetry
+import kotlin.time.TimeSource
 
 class CactusLM {
     private var _handle: Long? = null
     private var _lastDownloadedModel: String = "qwen3-0.6"
     private var models = listOf<CactusModel>()
+    private val openRouterModule = OpenRouterModule()
+    private val timeSource = TimeSource.Monotonic
 
     suspend fun downloadModel(
         model: String = _lastDownloadedModel
@@ -45,43 +48,75 @@ class CactusLM {
     suspend fun generateCompletion(
         messages: List<ChatMessage>,
         params: CactusCompletionParams,
-        onToken: CactusStreamingCallback? = null
+        onToken: CactusStreamingCallback? = null,
+        mode: InferenceMode = InferenceMode.LOCAL,
+        apiKey: String? = null
     ): CactusCompletionResult? {
-        val currentHandle = _handle
-        if (currentHandle == null) {
-            if (Telemetry.isInitialized) {
-                Telemetry.instance?.logCompletion(
-                    CactusCompletionResult(success = false),
-                    CactusInitParams(), 
-                    message = "Context not initialized",
-                )
+        val startTime = timeSource.markNow()
+        var result: CactusCompletionResult?
+
+        val localCompletion = suspend local@{
+            val currentHandle = _handle
+            if (currentHandle == null) {
+                if (Telemetry.isInitialized) {
+                    Telemetry.instance?.logCompletion(
+                        CactusCompletionResult(success = false),
+                        CactusInitParams(),
+                        message = "Context not initialized",
+                    )
+                }
+                return@local null
             }
-            return null
+
+            try {
+                val toolsJson = params.tools.toToolsJson()
+                CactusContext.completion(currentHandle, messages, params, toolsJson, onToken)
+            } catch (e: Exception) {
+                if (Telemetry.isInitialized) {
+                    val initParams = CactusInitParams(model = _lastDownloadedModel)
+                    Telemetry.instance?.logCompletion(CactusCompletionResult(success = false), initParams, message = e.message)
+                }
+                throw e
+            }
         }
 
-        try {
-            val toolsJson = params.tools.toToolsJson()
-
-            val result = CactusContext.completion(currentHandle, messages, params, toolsJson, onToken)
-
-            if (Telemetry.isInitialized) {
-                val initParams = CactusInitParams(
-                    model = _lastDownloadedModel,
-                )
-                Telemetry.instance?.logCompletion(result, initParams)
+        val remoteCompletion = suspend {
+            if (apiKey != null) {
+                openRouterModule.generateCompletion(messages, params, apiKey, onToken)
+            } else {
+                println("Remote inference requires an apiKey.")
+                null
             }
-            
-            return result
-        } catch (e: Exception) {
-            // Track telemetry for errors (if telemetry is initialized)
-            if (Telemetry.isInitialized) {
-                val initParams = CactusInitParams(
-                    model = _lastDownloadedModel,
-                )
-                Telemetry.instance?.logCompletion(CactusCompletionResult(success = false), initParams, message = e.message)
-            }
-            throw e
         }
+
+        result = when (mode) {
+            InferenceMode.LOCAL -> localCompletion()
+            InferenceMode.REMOTE -> remoteCompletion()
+            InferenceMode.LOCAL_FIRST -> {
+                val localResult = localCompletion()
+                if (localResult?.success == true) localResult else remoteCompletion()
+            }
+            InferenceMode.REMOTE_FIRST -> {
+                val remoteResult = remoteCompletion()
+                if (remoteResult?.success == true) remoteResult else localCompletion()
+            }
+        }
+
+        if (Telemetry.isInitialized) {
+            val initParams = CactusInitParams(
+                model = _lastDownloadedModel,
+            )
+            val message = if (result?.success == true) null else result?.response
+            Telemetry.instance?.logCompletion(
+                result ?: CactusCompletionResult(success = false),
+                initParams,
+                message = message,
+                responseTime = startTime.elapsedNow().inWholeMilliseconds.toDouble(),
+                mode = mode
+            )
+        }
+
+        return result
     }
 
     suspend fun generateEmbedding(

@@ -36,6 +36,7 @@ data class CactusEmbeddingResult(
     val errorMessage: String? = null
 )
 
+@Serializable
 data class ChatMessage(
     val content: String,
     val role: String,
@@ -109,5 +110,9 @@ sealed class SpeechState {
 }
 
 enum class TranscriptionMode {
+    LOCAL, REMOTE, LOCAL_FIRST, REMOTE_FIRST
+}
+
+enum class InferenceMode {
     LOCAL, REMOTE, LOCAL_FIRST, REMOTE_FIRST
 }
