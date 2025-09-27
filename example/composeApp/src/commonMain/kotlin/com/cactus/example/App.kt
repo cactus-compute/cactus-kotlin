@@ -237,7 +237,7 @@ fun App() {
     fun transcribe() {
         scope.launch {
             outputText = "Listening..."
-            val result = stt.transcribe(SpeechRecognitionParams())
+            val result = stt.transcribe()
             outputText = result?.text ?: "Transcription failed."
         }
     }

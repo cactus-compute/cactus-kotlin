@@ -46,7 +46,7 @@ kotlin {
             implementation(compose.ui)
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
-            implementation("com.cactus:library:0.3-beta.1")
+            implementation("com.cactus:library:0.3-beta.3")
             implementation(libs.ktor.client.core)
         }
     }
