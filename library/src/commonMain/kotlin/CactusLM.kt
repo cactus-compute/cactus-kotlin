@@ -47,7 +47,7 @@ class CactusLM {
 
     suspend fun generateCompletion(
         messages: List<ChatMessage>,
-        params: CactusCompletionParams,
+        params: CactusCompletionParams = CactusCompletionParams(),
         onToken: CactusStreamingCallback? = null
     ): CactusCompletionResult? {
         val startTime = timeSource.markNow()
@@ -68,6 +68,7 @@ class CactusLM {
 
             try {
                 val toolsJson = params.tools.toToolsJson()
+                println("Tools JSON: $toolsJson")
                 CactusContext.completion(currentHandle, messages, params, toolsJson, onToken)
             } catch (e: Exception) {
                 if (Telemetry.isInitialized) {
