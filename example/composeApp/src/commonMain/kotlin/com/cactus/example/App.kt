@@ -1,398 +1,129 @@
 package com.cactus.example
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Card
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.cactus.*
-import com.cactus.models.ToolParameter
-import com.cactus.models.createTool
 import com.cactus.services.CactusTelemetry
-import kotlinx.coroutines.launch
+import com.cactus.example.theme.AppTheme
+import com.cactus.example.pages.BasicCompletionPage
+import com.cactus.example.pages.EmbeddingPage
+import com.cactus.example.pages.FetchModelsPage
+import com.cactus.example.pages.FunctionCallingPage
+import com.cactus.example.pages.HybridCompletionPage
+import com.cactus.example.pages.StreamingCompletionPage
+import com.cactus.example.pages.TranscriptionPage
+
+data class ExampleItem(
+    val title: String,
+    val description: String,
+    val page: @Composable () -> Unit
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun App() {
-    val scope = rememberCoroutineScope()
-    var lm by remember { mutableStateOf(CactusLM()) }
-    var stt by remember { mutableStateOf(CactusSTT()) }
-
-    var isModelDownloaded by remember { mutableStateOf(false) }
-    var isModelLoaded by remember { mutableStateOf(false) }
-    var isDownloading by remember { mutableStateOf(false) }
-    var isInitializing by remember { mutableStateOf(false) }
-
-    var isSttDownloaded by remember { mutableStateOf(false) }
-    var isSttLoaded by remember { mutableStateOf(false) }
-    var isSttDownloading by remember { mutableStateOf(false) }
-    var isSttInitializing by remember { mutableStateOf(false) }
-
-    var outputText by remember { mutableStateOf("Welcome to Cactus Demo!") }
-    var lastResponse by remember { mutableStateOf<String?>(null) }
-    var lastTPS by remember { mutableStateOf<Double?>(null) }
-    var lastTTFT by remember { mutableStateOf<Double?>(null) }
-    var availableModels by remember { mutableStateOf<List<CactusModel>>(emptyList()) }
-
-    @Composable
-    fun StatItem(label: String, value: String) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-            Text(value)
-        }
-    }
-
+    var currentPage by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+    
     // Set telemetry token
     LaunchedEffect(Unit) {
-        CactusTelemetry.setTelemetryToken("729ebf35-465f-441b-932d-f7819a36d8ca")
-        println("LM models: ${lm.getModels()}")
-        println("Voice models: ${stt.getVoiceModels()}")
+        CactusTelemetry.setTelemetryToken("a83c7f7a-43ad-4823-b012-cbeb587ae788")
     }
 
-    fun downloadModel() {
-        scope.launch {
-            isDownloading = true
-            outputText = "Downloading model..."
+    val examples = listOf(
+        ExampleItem(
+            title = "Basic Completion",
+            description = "Simple, straightforward text completion"
+        ) { BasicCompletionPage { currentPage = null } },
+        ExampleItem(
+            title = "Streaming Completion",
+            description = "Real-time streaming text generation"
+        ) { StreamingCompletionPage { currentPage = null } },
+        ExampleItem(
+            title = "Function Calling",
+            description = "Tool/function calling capabilities"
+        ) { FunctionCallingPage { currentPage = null } },
+        ExampleItem(
+            title = "Hybrid Completion",
+            description = "Cloud fallback functionality"
+        ) { HybridCompletionPage { currentPage = null } },
+        ExampleItem(
+            title = "Fetch Models",
+            description = "Model discovery and management"
+        ) { FetchModelsPage { currentPage = null } },
+        ExampleItem(
+            title = "Embedding",
+            description = "Text embedding generation"
+        ) { EmbeddingPage { currentPage = null } },
+        ExampleItem(
+            title = "Transcription",
+            description = "Audio transcription capabilities"
+        ) { TranscriptionPage { currentPage = null } },
+    )
 
-            try {
-                val downloadSuccess = lm.downloadModel()
-                if (downloadSuccess) {
-                    isModelDownloaded = true
-                    outputText = "Model downloaded successfully! Click \"Initialize\" to load it."
-                } else {
-                    outputText = "Failed to download model."
-                }
-            } catch (e: Exception) {
-                outputText = "Error downloading model: ${e.message}"
-            } finally {
-                isDownloading = false
-            }
-        }
-    }
-
-    fun downLoadSttModel() {
-        scope.launch {
-            if (!stt.isModelDownloaded()) {
-                isSttDownloading = true
-                outputText = "Downloading STT model..."
-
-                try {
-                    val downloadSuccess = stt.download()
-                    if (downloadSuccess) {
-                        isSttDownloaded = true
-                        outputText = "STT Model downloaded successfully! Click \"Initialize\" to load it."
-                    } else {
-                        outputText = "Failed to download STT model."
-                    }
-                } catch (e: Exception) {
-                    outputText = "Error downloading STT model: ${e.message}"
-                } finally {
-                    isSttDownloading = false
-                }
-            } else {
-                isSttDownloaded = true
-                outputText = "STT Model already downloaded. Click \"Initialize\" to load it."
-            }
-        }
-    }
-
-    fun initializeModel() {
-        scope.launch {
-            isInitializing = true
-            outputText = "Initializing model..."
-
-            try {
-                val loadSuccess = lm.initializeModel(params = CactusInitParams(contextSize = 2048))
-                if (loadSuccess) {
-                    isModelLoaded = true
-                    outputText = "Model initialized successfully! Ready to generate completions."
-                } else {
-                    outputText = "Failed to initialize model."
-                }
-            } catch (e: Exception) {
-                outputText = "Error initializing model: ${e.message}"
-            } finally {
-                isInitializing = false
-            }
-        }
-    }
-
-    fun initializeSTTModel() {
-        scope.launch {
-            isSttInitializing = true
-            outputText = "Initializing STT model..."
-
-            try {
-                val loadSuccess = stt.init()
-                if (loadSuccess) {
-                    isSttLoaded = true
-                    outputText = "STT Model initialized successfully! Ready to transcribe."
-                } else {
-                    outputText = "Failed to initialize STT model."
-                }
-            } catch (e: Exception) {
-                outputText = "Error initializing STT model: ${e.message}"
-            } finally {
-                isSttInitializing = false
-            }
-        }
-    }
-
-    fun generateCompletion() {
-        if (!isModelLoaded) {
-            outputText = "Please download and initialize model first."
-            return
-        }
-
-        scope.launch {
-            isInitializing = true
-            outputText = "Generating response..."
-            var firstToken = true
-
-            try {
-                val resp = lm.generateCompletion(
-                    messages = listOf(ChatMessage("What's the weather in New York?", "user")),
-                    params = CactusCompletionParams(
-                        tools = listOf(
-                            createTool(
-                                name = "get_weather",
-                                description = "Get weather for a location",
-                                parameters = mapOf(
-                                    "location" to ToolParameter("string", "City name", true)
-                                )
-                            )
-                        ),
-                    ),
-                    onToken = { token, tokenId ->
-                        if(firstToken) {
-                            lastResponse = ""
-                            firstToken = false
-                        }
-                        lastResponse += token
-                    },
-                )
-
-                if (resp != null && resp.success) {
-                    lastResponse = resp.response
-                    lastTPS = resp.tokensPerSecond
-                    lastTTFT = resp.timeToFirstTokenMs
-                    outputText = "Generation completed successfully!"
-                } else {
-                    outputText = "Failed to generate response."
-                    lastResponse = null
-                    lastTPS = null
-                    lastTTFT = null
-                }
-                println("Final response: $resp")
-            } catch (e: Exception) {
-                outputText = "Error generating response: ${e.message}"
-                lastResponse = null
-                lastTPS = null
-                lastTTFT = null
-            } finally {
-                isInitializing = false
-            }
-        }
-    }
-
-    fun generateEmbeddings() {
-        if (!isModelLoaded) {
-            outputText = "Please download and initialize model first."
-            return
-        }
-
-        scope.launch {
-            isInitializing = true
-            outputText = "Generating Embedding..."
-            try {
-                val resp = lm.generateEmbedding(
-                    text = "What's the weather in New York?"
-                )
-
-                if (resp != null && resp.success) {
-                    lastResponse = "Dimensions: ${resp.dimension} \nLength: ${resp.embeddings.size} \nEmbeddings: [${resp.embeddings.take(5).joinToString(", ")}...]"
-                    outputText = "Generation completed successfully!"
-                } else {
-                    outputText = "Failed to generate embedding."
-                    lastResponse = null
-                    lastTPS = null
-                    lastTTFT = null
-                }
-            } catch (e: Exception) {
-                outputText = "Error generating embedding: ${e.message}"
-                lastResponse = null
-                lastTPS = null
-                lastTTFT = null
-            } finally {
-                isInitializing = false
-            }
-        }
-    }
-
-    fun transcribe() {
-        scope.launch {
-            outputText = "Listening..."
-            val result = stt.transcribe()
-            outputText = result?.text ?: "Transcription failed."
-        }
-    }
-
-    MaterialTheme {
-        Scaffold(
-            topBar = {
-                TopAppBar(
-                    title = { Text("Cactus Demo") },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        titleContentColor = MaterialTheme.colorScheme.primary,
-                    )
-                )
-            },
-            modifier = Modifier.fillMaxSize()
-        ) { innerPadding ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-                    .padding(16.dp)
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // LLM Card
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text("Language Model", style = MaterialTheme.typography.titleLarge)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Button(
-                                onClick = { downloadModel() },
-                                enabled = !isDownloading,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(if (isModelDownloaded) "Downloaded ✓" else "Download")
-                            }
-                            Button(
-                                onClick = { initializeModel() },
-                                enabled = !isInitializing,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(if (isModelLoaded) "Initialized ✓" else "Initialize")
-                            }
-                        }
-                        Button(
-                            onClick = { generateCompletion() },
-                            enabled = isModelLoaded && !isInitializing,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Generate Completion")
-                        }
-                        Button(
-                            onClick = { generateEmbeddings() },
-                            enabled = isModelLoaded && !isInitializing,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Generate Embeddings")
-                        }
-                    }
-                }
-
-                // STT Card
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text("Speech-to-Text", style = MaterialTheme.typography.titleLarge)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
-                        ) {
-                            Button(
-                                onClick = { downLoadSttModel() },
-                                enabled = !isSttDownloading,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(if (isSttDownloaded) "Downloaded ✓" else "Download")
-                            }
-                            Button(
-                                onClick = { initializeSTTModel() },
-                                enabled = !isSttInitializing,
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(if (isSttLoaded) "Initialized ✓" else "Initialize")
-                            }
-                        }
-                        Button(
-                            onClick = { transcribe() },
-                            enabled = isSttLoaded && !isSttInitializing,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Start Transcription")
-                        }
-                    }
-                }
-
-                // Status Section
-                if (isDownloading || isInitializing || isSttDownloading || isSttInitializing) {
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                        Text(
-                            outputText,
-                            style = MaterialTheme.typography.bodySmall,
-                            textAlign = TextAlign.Center
+    AppTheme {
+        if (currentPage != null) {
+            currentPage!!()
+        } else {
+            Scaffold(
+                topBar = {
+                    TopAppBar(
+                        title = { Text("Cactus Examples") },
+                        colors = TopAppBarDefaults.topAppBarColors(
+                            containerColor = MaterialTheme.colorScheme.surface,
+                            titleContentColor = MaterialTheme.colorScheme.onSurface,
                         )
-                    }
-                }
-
-                // Output Card
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Text("Output", style = MaterialTheme.typography.titleLarge)
-                        Text(outputText)
-
-                        lastResponse?.let { response ->
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            Text("Response:", style = MaterialTheme.typography.titleMedium)
-                            Text(response)
-
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceEvenly
+                    )
+                },
+                modifier = Modifier.fillMaxSize()
+            ) { innerPadding ->
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(horizontal = 16.dp),
+                    contentPadding = PaddingValues(vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(examples) { example ->
+                        Card(
+                            onClick = { currentPage = example.page },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(16.dp)
                             ) {
-                                StatItem("TTFT", "${lastTTFT ?: 0.0} ms")
-                                StatItem("TPS", "${lastTPS ?: 0.0}")
-                            }
-                        }
-
-                        if (availableModels.isNotEmpty()) {
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                            Text("Available Models:", style = MaterialTheme.typography.titleMedium)
-                            Column {
-                                availableModels.forEach { model ->
-                                    Text(
-                                        "• ${model.name} (${model.size_mb}MB)",
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
+                                Text(
+                                    text = example.title,
+                                    style = MaterialTheme.typography.titleMedium
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = example.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
