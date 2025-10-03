@@ -115,6 +115,10 @@ enum class TranscriptionMode {
     LOCAL, REMOTE, LOCAL_FIRST, REMOTE_FIRST
 }
 
+enum class TranscriptionProvider {
+    VOSK
+}
+
 enum class InferenceMode {
     LOCAL, REMOTE, LOCAL_FIRST, REMOTE_FIRST
 }

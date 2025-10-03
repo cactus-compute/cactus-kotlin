@@ -5,11 +5,14 @@ import com.cactus.services.Telemetry
 import kotlin.time.TimeSource
 import com.cactus.WisprFlow
 
-class CactusSTT {
+class CactusSTT(
+    private val provider: TranscriptionProvider = TranscriptionProvider.VOSK
+) {
     private var isInitialized = false
     private var lastDownloadedModelName: String = "vosk-en-us"
     private val timeSource = TimeSource.Monotonic
     private val wisprFlow = WisprFlow()
+    private lateinit var speechProvider: SpeechRecognitionProvider
 
 
     // spk model is universal, no need to change it for different languages
@@ -45,7 +48,10 @@ class CactusSTT {
     suspend fun init(model: String = lastDownloadedModelName): Boolean {
         isInitialized = false
         try {
-            isInitialized = initializeSTT(model, spkModelFolder)
+            // Initialize the speech provider based on the selected provider
+            speechProvider = getSpeechRecognitionProvider(provider)
+            isInitialized = speechProvider.initialize(model, spkModelFolder)
+            
             if (Telemetry.isInitialized) {
                 val message = if (isInitialized) null else "Failed to initialize model: $model"
                 Telemetry.instance?.logInit(isInitialized, CactusInitParams(
@@ -75,7 +81,7 @@ class CactusSTT {
 
         val localTranscribe = suspend {
             if (isInitialized) {
-                performSTT(params, filePath)
+                speechProvider.performRecognition(params, filePath)
             } else {
                 println("Local STT not initialized.")
                 null
@@ -141,7 +147,9 @@ class CactusSTT {
     }
 
     fun stop() {
-        stopSTT()
+        if (isInitialized) {
+            speechProvider.stop()
+        }
     }
 
     fun isReady(): Boolean = isInitialized
@@ -173,7 +181,3 @@ class CactusSTT {
         return voiceModels.firstOrNull { it.slug == slug }
     }
 }
-
-expect suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): Boolean
-expect suspend fun performSTT(params: SpeechRecognitionParams, filePath: String?): SpeechRecognitionResult?
-expect fun stopSTT()
