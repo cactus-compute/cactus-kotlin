@@ -156,7 +156,11 @@ class CactusSTT(
 
     suspend fun getVoiceModels(): List<VoiceModel> {
         if (voiceModels.isEmpty()) {
-            voiceModels = Supabase.fetchVoiceModels()
+            val providerName = when (provider) {
+                TranscriptionProvider.VOSK -> "vosk"
+                TranscriptionProvider.WHISPER -> "whisper"
+            }
+            voiceModels = Supabase.fetchVoiceModels(providerName)
             for (model in voiceModels) {
                 model.isDownloaded = modelExists(model.slug)
             }

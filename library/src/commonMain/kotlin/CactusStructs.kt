@@ -70,6 +70,7 @@ data class VoiceModel(
     val url: String,
     val size_mb: Int,
     val file_name: String,
+    val provider: String = "vosk",
     var isDownloaded: Boolean = false
 )
 
