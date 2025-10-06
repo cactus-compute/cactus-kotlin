@@ -1,6 +1,11 @@
 package com.cactus
 
-data class DownloadTask(val url: String, val filename: String, val folder: String)
+data class DownloadTask(
+    val url: String, 
+    val filename: String, 
+    val folder: String, 
+    val requiresExtraction: Boolean = true
+)
 
 object ModelDownloader {
     suspend fun <T> updateDownloadStatus(

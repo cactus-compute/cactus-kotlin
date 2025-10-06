@@ -3,9 +3,6 @@ package com.cactus
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import platform.Foundation.NSFileManager
-import platform.Foundation.NSSearchPathForDirectoriesInDomains
-import platform.Foundation.NSUserDomainMask
 import utils.IOSFileUtils
 
 @OptIn(ExperimentalForeignApi::class)
