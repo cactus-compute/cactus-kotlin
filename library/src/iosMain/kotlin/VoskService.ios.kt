@@ -435,11 +435,3 @@ class VoskSpeechRecognitionProvider : SpeechRecognitionProvider {
         }
     }
 }
-
-// Provider factory
-actual fun getSpeechRecognitionProvider(provider: TranscriptionProvider): SpeechRecognitionProvider {
-    return when (provider) {
-        TranscriptionProvider.VOSK -> VoskSpeechRecognitionProvider()
-        TranscriptionProvider.WISPR -> throw IllegalArgumentException("WISPR provider not yet implemented for iOS")
-    }
-}

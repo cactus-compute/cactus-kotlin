@@ -26,7 +26,7 @@ private val applicationContext: Context by lazy {
 }
 
 // Provider implementations
-class VoskSpeechRecognitionProviderAndroid : SpeechRecognitionProvider {
+class VoskSpeechRecognitionProvider: SpeechRecognitionProvider {
     private var model: Model? = null
     private var spkModel: SpeakerModel? = null
     private var isModelReady = false
@@ -374,12 +374,5 @@ class VoskSpeechRecognitionProviderAndroid : SpeechRecognitionProvider {
                 ))
             }
         }
-    }
-}
-
-// Provider factory
-actual fun getSpeechRecognitionProvider(provider: TranscriptionProvider): SpeechRecognitionProvider {
-    return when (provider) {
-        TranscriptionProvider.VOSK -> VoskSpeechRecognitionProviderAndroid()
     }
 }
