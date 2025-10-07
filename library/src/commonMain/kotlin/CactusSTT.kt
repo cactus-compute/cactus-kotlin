@@ -5,11 +5,14 @@ import com.cactus.services.Telemetry
 import kotlin.time.TimeSource
 import com.cactus.WisprFlow
 
-class CactusSTT {
+class CactusSTT(
+    private val provider: TranscriptionProvider = TranscriptionProvider.VOSK
+) {
     private var isInitialized = false
     private var lastDownloadedModelName: String = "vosk-en-us"
     private val timeSource = TimeSource.Monotonic
     private val wisprFlow = WisprFlow()
+    private lateinit var speechProvider: SpeechRecognitionProvider
 
 
     // spk model is universal, no need to change it for different languages
@@ -29,11 +32,36 @@ class CactusSTT {
             return false
         }
         val tasks = mutableListOf<DownloadTask>()
-        if(!modelExists(currentModel.file_name)) {
-            tasks.add(DownloadTask(currentModel.url, "${currentModel.file_name}.zip", model))
+
+        // Check if model is whisper (provider field)
+        val isWhisper = currentModel.provider == "whisper"
+
+        if(!modelExists(currentModel.slug)) {
+            if (isWhisper) {
+                // Whisper models are .bin files, no extraction needed
+                tasks.add(DownloadTask(
+                    url = currentModel.url,
+                    filename = "${currentModel.slug}.bin",
+                    folder = currentModel.slug,
+                    requiresExtraction = false
+                ))
+            } else {
+                // VOSK models are .zip files, need extraction
+                tasks.add(DownloadTask(
+                    url = currentModel.url,
+                    filename = "${currentModel.slug}.zip",
+                    folder = currentModel.slug,
+                    requiresExtraction = true
+                ))
+            }
         }
-        if(!modelExists(spkModelFolder)) {
-            tasks.add(DownloadTask(spkModelUrl, "$spkModelFolder.zip", spkModelFolder))
+        if(!isWhisper && !modelExists(spkModelFolder)) {
+            tasks.add(DownloadTask(
+                url = spkModelUrl,
+                filename = "$spkModelFolder.zip",
+                folder = spkModelFolder,
+                requiresExtraction = true
+            ))
         }
         val success = downloadAndExtractModels(tasks)
         if (success) {
@@ -45,7 +73,10 @@ class CactusSTT {
     suspend fun init(model: String = lastDownloadedModelName): Boolean {
         isInitialized = false
         try {
-            isInitialized = initializeSTT(model, spkModelFolder)
+            // Initialize the speech provider based on the selected provider
+            speechProvider = getSpeechRecognitionProvider(provider)
+            isInitialized = speechProvider.initialize(model, spkModelFolder)
+            
             if (Telemetry.isInitialized) {
                 val message = if (isInitialized) null else "Failed to initialize model: $model"
                 Telemetry.instance?.logInit(isInitialized, CactusInitParams(
@@ -75,7 +106,7 @@ class CactusSTT {
 
         val localTranscribe = suspend {
             if (isInitialized) {
-                performSTT(params, filePath)
+                speechProvider.performRecognition(params, filePath)
             } else {
                 println("Local STT not initialized.")
                 null
@@ -141,14 +172,20 @@ class CactusSTT {
     }
 
     fun stop() {
-        stopSTT()
+        if (isInitialized) {
+            speechProvider.stop()
+        }
     }
 
     fun isReady(): Boolean = isInitialized
 
-    suspend fun getVoiceModels(): List<VoiceModel> {
+    suspend fun getVoiceModels(provider: TranscriptionProvider = this.provider): List<VoiceModel> {
         if (voiceModels.isEmpty()) {
-            voiceModels = Supabase.fetchVoiceModels()
+            val providerName = when (provider) {
+                TranscriptionProvider.VOSK -> "vosk"
+                TranscriptionProvider.WHISPER -> "whisper"
+            }
+            voiceModels = Supabase.fetchVoiceModels(providerName)
             for (model in voiceModels) {
                 model.isDownloaded = modelExists(model.slug)
             }
@@ -163,7 +200,7 @@ class CactusSTT {
             println("No data found for model: $lastDownloadedModelName")
             return false
         }
-        return modelExists(currentModel.file_name) && modelExists(spkModelFolder)
+        return modelExists(currentModel.slug) && modelExists(spkModelFolder)
     }
 
     private suspend fun getModel(slug: String): VoiceModel? {
@@ -173,7 +210,3 @@ class CactusSTT {
         return voiceModels.firstOrNull { it.slug == slug }
     }
 }
-
-expect suspend fun initializeSTT(modelFolder: String, spkModelFolder: String): Boolean
-expect suspend fun performSTT(params: SpeechRecognitionParams, filePath: String?): SpeechRecognitionResult?
-expect fun stopSTT()

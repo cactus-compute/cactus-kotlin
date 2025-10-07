@@ -1,8 +1,12 @@
 package com.cactus
 
-expect suspend fun initializeSpeechRecognition(modelFolder: String, spkModelFolder: String): Boolean
-expect suspend fun requestSpeechPermissions(): Boolean
-expect suspend fun performSpeechRecognition(params: SpeechRecognitionParams, filePath: String? = null): SpeechRecognitionResult?
-expect fun stopSpeechRecognition()
-expect fun isSpeechRecognitionAvailable(): Boolean
-expect fun isSpeechRecognitionAuthorized(): Boolean
+interface SpeechRecognitionProvider {
+    suspend fun initialize(modelFolder: String, spkModelFolder: String): Boolean
+    suspend fun requestPermissions(): Boolean
+    suspend fun performRecognition(params: SpeechRecognitionParams, filePath: String? = null): SpeechRecognitionResult?
+    fun stop()
+    fun isAvailable(): Boolean
+    fun isAuthorized(): Boolean
+}
+
+expect fun getSpeechRecognitionProvider(provider: TranscriptionProvider): SpeechRecognitionProvider

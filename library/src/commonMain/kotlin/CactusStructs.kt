@@ -70,6 +70,7 @@ data class VoiceModel(
     val url: String,
     val size_mb: Int,
     val file_name: String,
+    val provider: String = "vosk",
     var isDownloaded: Boolean = false
 )
 
@@ -113,6 +114,10 @@ sealed class SpeechState {
 
 enum class TranscriptionMode {
     LOCAL, REMOTE, LOCAL_FIRST, REMOTE_FIRST
+}
+
+enum class TranscriptionProvider {
+    VOSK, WHISPER
 }
 
 enum class InferenceMode {

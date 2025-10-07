@@ -10,17 +10,6 @@ external fun nativeRegisterApp(encryptedPayload: String): String?
 external fun nativeGetDeviceId(): String?
 external fun nativeSetAndroidDataDirectory(dataDirectory: String)
 
-private object CactusUtilLoader {
-    init {
-        try {
-            // The cactus_util library contains the utility functions
-            System.loadLibrary("cactus_util")
-        } catch (e: UnsatisfiedLinkError) {
-            throw RuntimeException("Could not load cactus_util native library", e)
-        }
-    }
-}
-
 actual suspend fun getDeviceMetadata(): Map<String, Any> {
     val context = CactusContextInitializer.getApplicationContext()
     
@@ -45,9 +34,6 @@ actual suspend fun getDeviceMetadata(): Map<String, Any> {
 
 actual suspend fun getDeviceId(): String? {
     return try {
-        // Ensure the native library is loaded
-        CactusUtilLoader
-        
         // Initialize data directory if not already done
         val context = CactusContextInitializer.getApplicationContext()
         nativeSetAndroidDataDirectory(context.filesDir.absolutePath)
@@ -62,9 +48,6 @@ actual suspend fun getDeviceId(): String? {
 
 actual suspend fun registerApp(encString: String): String? {
     return try {
-        // Ensure the native library is loaded
-        CactusUtilLoader
-        
         // Initialize data directory if not already done
         val context = CactusContextInitializer.getApplicationContext()
         nativeSetAndroidDataDirectory(context.filesDir.absolutePath)

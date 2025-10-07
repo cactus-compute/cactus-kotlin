@@ -7,7 +7,6 @@ import okio.Path.Companion.toPath
 import okio.buffer
 import okio.openZip
 import okio.use
-import platform.Foundation.NSCachesDirectory
 import platform.Foundation.NSData
 import platform.Foundation.NSDocumentDirectory
 import platform.Foundation.NSFileManager
@@ -27,21 +26,27 @@ object IOSFileUtils {
     ): Boolean {
         val fm = NSFileManager.Companion.defaultManager
 
-        val path = "$baseDir/$fileName"
-        if (fm.fileExistsAtPath(path)) return true
-
-        if (!downloadFile(urlString, path)) return false
-
         if (fileName.endsWith(".zip", ignoreCase = true)) {
+            val path = "$baseDir/$fileName"
+            if (fm.fileExistsAtPath(path)) return true
+
+            if (!downloadFile(urlString, path)) return false
+
             val targetDir = "$baseDir/$extractedDirName"
             val unzipOk = extractZip(zipFilePath = path.toPath(), outputDir = targetDir.toPath())
             if (unzipOk) {
                 runCatching { fm.removeItemAtPath(path, null) }
             }
             return unzipOk
+        } else {
+            val targetDir = "$baseDir/$extractedDirName"
+            createDirectoryIfNeeded(targetDir)
+            val path = "$targetDir/$fileName"
+            
+            if (fm.fileExistsAtPath(path)) return true
+            
+            return downloadFile(urlString, path)
         }
-
-        return true
     }
 
     private fun downloadFile(urlString: String, filePath: String): Boolean {

@@ -142,13 +142,16 @@ object Supabase {
         }
     }
 
-    suspend fun fetchVoiceModels(): List<VoiceModel> {
+    suspend fun fetchVoiceModels(provider: String? = null): List<VoiceModel> {
         return try {
             val response = client.get("$SUPABASE_URL/rest/v1/voice_models") {
                 header("apikey", SUPABASE_KEY)
                 header("Authorization", "Bearer $SUPABASE_KEY")
                 header("Accept-Profile", "cactus")
                 parameter("select", "*")
+                if (provider != null) {
+                    parameter("provider", "eq.$provider")
+                }
             }
 
             if (response.status == HttpStatusCode.OK) {
