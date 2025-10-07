@@ -46,14 +46,14 @@ actual fun rememberFilePickerLauncher(
                                     
                                     try {
                                         val fileManager = NSFileManager.defaultManager
-                                        val fileName = url.lastPathComponent ?: "audio_${NSUUID().UUIDString}.wav"
+                                        // Always use a unique filename to avoid file conflicts
+                                        val originalFileName = url.lastPathComponent ?: "audio.wav"
+                                        val fileExtension = originalFileName.substringAfterLast(".", "wav")
+                                        val uniqueId = NSUUID().UUIDString
+                                        val fileName = "audio_${uniqueId}.${fileExtension}"
                                         val tempDir = NSTemporaryDirectory()
                                         val destinationPath = "$tempDir$fileName"
                                         val destinationURL = NSURL.fileURLWithPath(destinationPath)
-                                        
-                                        if (fileManager.fileExistsAtPath(destinationPath)) {
-                                            fileManager.removeItemAtURL(destinationURL, null)
-                                        }
                                         
                                         val success = fileManager.copyItemAtURL(url, destinationURL, null)
                                         
