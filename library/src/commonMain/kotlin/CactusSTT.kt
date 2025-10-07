@@ -32,11 +32,36 @@ class CactusSTT(
             return false
         }
         val tasks = mutableListOf<DownloadTask>()
-        if(!modelExists(currentModel.file_name)) {
-            tasks.add(DownloadTask(currentModel.url, "${currentModel.file_name}.zip", model))
+
+        // Check if model is whisper (provider field)
+        val isWhisper = currentModel.provider == "whisper"
+
+        if(!modelExists(currentModel.slug)) {
+            if (isWhisper) {
+                // Whisper models are .bin files, no extraction needed
+                tasks.add(DownloadTask(
+                    url = currentModel.url,
+                    filename = "${currentModel.slug}.bin",
+                    folder = currentModel.slug,
+                    requiresExtraction = false
+                ))
+            } else {
+                // VOSK models are .zip files, need extraction
+                tasks.add(DownloadTask(
+                    url = currentModel.url,
+                    filename = "${currentModel.slug}.zip",
+                    folder = currentModel.slug,
+                    requiresExtraction = true
+                ))
+            }
         }
-        if(!modelExists(spkModelFolder)) {
-            tasks.add(DownloadTask(spkModelUrl, "$spkModelFolder.zip", spkModelFolder))
+        if(!isWhisper && !modelExists(spkModelFolder)) {
+            tasks.add(DownloadTask(
+                url = spkModelUrl,
+                filename = "$spkModelFolder.zip",
+                folder = spkModelFolder,
+                requiresExtraction = true
+            ))
         }
         val success = downloadAndExtractModels(tasks)
         if (success) {
@@ -175,7 +200,7 @@ class CactusSTT(
             println("No data found for model: $lastDownloadedModelName")
             return false
         }
-        return modelExists(currentModel.file_name) && modelExists(spkModelFolder)
+        return modelExists(currentModel.slug) && modelExists(spkModelFolder)
     }
 
     private suspend fun getModel(slug: String): VoiceModel? {
