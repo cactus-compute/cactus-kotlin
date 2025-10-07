@@ -12,99 +12,238 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cactus.*
+import com.cactus.example.rememberFilePickerLauncher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TranscriptionPage(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
-    val stt = remember { CactusSTT() }
     
-    var isModelDownloaded by remember { mutableStateOf(false) }
+    var currentProvider by remember { mutableStateOf(TranscriptionProvider.WHISPER) }
+    var stt by remember { mutableStateOf(CactusSTT(currentProvider)) }
+    
+    var voiceModels by remember { mutableStateOf<List<VoiceModel>>(emptyList()) }
+    var selectedModel by remember { mutableStateOf("tiny") }
+    
     var isModelLoaded by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
     var isInitializing by remember { mutableStateOf(false) }
     var isTranscribing by remember { mutableStateOf(false) }
-    var outputText by remember { mutableStateOf("Ready to start. Click \"Download Model\" to begin.") }
+    var isLoadingModels by remember { mutableStateOf(false) }
+    var isUsingDefaultModel by remember { mutableStateOf(false) }
+    var isPreparingFile by remember { mutableStateOf(false) }
+    var outputText by remember { mutableStateOf("Ready to start. Select a model and initialize to begin.") }
     var lastResponse by remember { mutableStateOf<SpeechRecognitionResult?>(null) }
-    fun downloadModel() {
+    var downloadProgress by remember { mutableStateOf("") }
+    var downloadPercentage by remember { mutableStateOf<Float?>(null) }
+
+    fun resetState() {
+        isModelLoaded = false
+        isDownloading = false
+        isInitializing = false
+        isTranscribing = false
+        isLoadingModels = false
+        isUsingDefaultModel = false
+        isPreparingFile = false
+        voiceModels = emptyList()
+        lastResponse = null
+        downloadProgress = ""
+        downloadPercentage = null
+        selectedModel = "tiny"
+        outputText = "Ready to start. Select a model and initialize to begin."
+    }
+
+    fun loadVoiceModels() {
         scope.launch {
-            isDownloading = true
-            outputText = "Downloading model..."
+            isLoadingModels = true
             
             try {
-                val downloadSuccess = stt.download()
+                val models = stt.getVoiceModels()
+                voiceModels = models
+                isLoadingModels = false
+                isUsingDefaultModel = false
                 
-                if (downloadSuccess) {
-                    isModelDownloaded = true
-                    outputText = "Model downloaded successfully! Click \"Initialize Model\" to load it."
+                if (models.isNotEmpty()) {
+                    if (!models.any { it.slug == selectedModel }) {
+                        selectedModel = models.first().slug
+                    }
+                    outputText = "Models loaded. Select model and click 'Download & Initialize Model' to begin."
                 } else {
-                    outputText = "Failed to download model."
+                    outputText = "No models available."
                 }
             } catch (e: Exception) {
-                outputText = "Error downloading model: ${e.message}"
-            } finally {
-                isDownloading = false
+                val defaultSlug = if (currentProvider == TranscriptionProvider.VOSK) {
+                    "vosk-en-us"
+                } else {
+                    "whisper-tiny"
+                }
+                
+                voiceModels = emptyList()
+                selectedModel = defaultSlug
+                isLoadingModels = false
+                isUsingDefaultModel = true
+                outputText = "Network error loading models. Using default model: $defaultSlug"
             }
         }
     }
 
-    fun initializeModel() {
+    fun downloadAndInitializeModel() {
         scope.launch {
+            isDownloading = true
             isInitializing = true
-            outputText = "Initializing model..."
+            outputText = "Downloading and initializing model..."
+            downloadProgress = "Starting download..."
+            downloadPercentage = null
             
             try {
-                val loadSuccess = stt.init()
-                if (loadSuccess) {
+                val downloadSuccess = stt.download(
+                    model = selectedModel,
+                )
+                
+                if (!downloadSuccess) {
+                    isDownloading = false
+                    isInitializing = false
+                    downloadProgress = ""
+                    downloadPercentage = null
+                    outputText = "Failed to download model."
+                    return@launch
+                }
+                
+                isDownloading = false
+                downloadProgress = ""
+                downloadPercentage = null
+                outputText = "Model downloaded successfully! Initializing..."
+                
+                val initSuccess = stt.init(model = selectedModel)
+                isInitializing = false
+                
+                if (initSuccess) {
                     isModelLoaded = true
-                    outputText = "Model initialized successfully! Ready to test transcription."
+                    outputText = "Model downloaded and initialized successfully! Ready to transcribe audio."
                 } else {
                     outputText = "Failed to initialize model."
                 }
             } catch (e: Exception) {
-                outputText = "Error initializing model: ${e.message}"
-            } finally {
+                isDownloading = false
                 isInitializing = false
+                downloadProgress = ""
+                downloadPercentage = null
+                outputText = "Error: ${e.message}"
             }
         }
     }
 
-    fun transcribeAudio() {
+    fun transcribeFromMicrophone() {
         if (!isModelLoaded) {
-            outputText = "Please download and initialize model first."
+            outputText = "Please initialize the model first."
             return
         }
         
         scope.launch {
-            isTranscribing = true
-            outputText = "Listening..."
-            
             try {
-                val resp = stt.transcribe()
+                isTranscribing = true
+                outputText = "Listening for audio... Speak now!"
                 
-                if (resp != null && resp.success) {
-                    lastResponse = resp
+                val params = SpeechRecognitionParams(
+                    sampleRate = 16000,
+                    maxDuration = 30000, // 30 seconds
+                    maxSilenceDuration = 3000, // 3 seconds of silence
+                )
+                
+                val result = withContext(Dispatchers.Default) {
+                    stt.transcribe(params = params)
+                }
+                
+                isTranscribing = false
+                if (result != null && result.success) {
+                    lastResponse = result
                     outputText = "Transcription completed successfully!"
                 } else {
-                    outputText = "Failed to transcribe."
+                    outputText = result?.text ?: "Failed to transcribe audio."
                     lastResponse = null
                 }
             } catch (e: Exception) {
-                outputText = "Error transcribing: ${e.message}"
-                lastResponse = null
-            } finally {
                 isTranscribing = false
+                outputText = "Error during transcription: ${e.message}"
+                lastResponse = null
             }
         }
     }
 
-    @Composable
-    fun StatItem(label: String, value: String) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold)
-            Text(value)
+    val filePickerLauncher = rememberFilePickerLauncher { selectedPath ->
+        scope.launch {
+            when {
+                selectedPath != null -> {
+                    try {
+                        isPreparingFile = false
+                        isTranscribing = true
+                        outputText = "Preparing audio file for transcription..."
+                        outputText = "Transcribing audio file: ${selectedPath.substringAfterLast('/')}"
+                        
+                        val params = SpeechRecognitionParams(
+                            sampleRate = 16000
+                        )
+                        
+                        val result = withContext(Dispatchers.Default) {
+                            stt.transcribe(
+                                params = params,
+                                filePath = selectedPath
+                            )
+                        }
+                        
+                        isTranscribing = false
+                        if (result != null && result.success) {
+                            lastResponse = result
+                            outputText = "File transcription completed successfully!"
+                        } else {
+                            outputText = result?.text ?: "Failed to transcribe audio file."
+                            lastResponse = null
+                        }
+                    } catch (e: Exception) {
+                        isTranscribing = false
+                        outputText = "Error during file transcription: ${e.message}"
+                        lastResponse = null
+                    }
+                }
+                else -> {
+                    isPreparingFile = false
+                    outputText = "File selection cancelled."
+                }
+            }
         }
+    }
+
+    fun transcribeFromFile() {
+        if (!isModelLoaded) {
+            outputText = "Please initialize the model first."
+            return
+        }
+        
+        scope.launch {
+            isPreparingFile = true
+            filePickerLauncher.launch()
+        }
+    }
+
+    fun stopTranscription() {
+        scope.launch {
+            try {
+                outputText = "Transcribing..."
+                withContext(Dispatchers.Default) {
+                    stt.stop()
+                }
+                outputText = "Processing recorded audio..."
+            } catch (e: Exception) {
+                outputText = "Error stopping transcription: ${e.message}"
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        loadVoiceModels()
     }
 
     DisposableEffect(Unit) {
@@ -116,16 +255,12 @@ fun TranscriptionPage(onBack: () -> Unit) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Transcription") },
+                title = { Text("Speech-to-Text") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                    titleContentColor = MaterialTheme.colorScheme.onSurface,
-                )
+                }
             )
         }
     ) { paddingValues ->
@@ -137,91 +272,247 @@ fun TranscriptionPage(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Info card
             Card(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(
-                        "Transcription Demo",
+                        "Speech-to-Text Transcription Demo",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold
+                    )
+                    
+                    Text(
+                        "This example demonstrates speech-to-text transcription using CactusSTT. Select a provider and model, initialize it, then you can transcribe from microphone input or from audio files.",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    
+                    HorizontalDivider()
+                    
+                    Text(
+                        "Provider Selection",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    var providerExpanded by remember { mutableStateOf(false) }
+                    ExposedDropdownMenuBox(
+                        expanded = providerExpanded,
+                        onExpandedChange = { 
+                            if (!isModelLoaded) providerExpanded = !providerExpanded 
+                        }
+                    ) {
+                        OutlinedTextField(
+                            value = when (currentProvider) {
+                                TranscriptionProvider.WHISPER -> "Whisper"
+                                TranscriptionProvider.VOSK -> "Vosk"
+                            },
+                            onValueChange = {},
+                            readOnly = true,
+                            enabled = !isModelLoaded,
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = providerExpanded) },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .menuAnchor()
+                        )
+                        
+                        ExposedDropdownMenu(
+                            expanded = providerExpanded,
+                            onDismissRequest = { providerExpanded = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text("Whisper") },
+                                onClick = {
+                                    if (currentProvider != TranscriptionProvider.WHISPER) {
+                                        currentProvider = TranscriptionProvider.WHISPER
+                                        resetState()
+                                        stt.stop()
+                                        stt = CactusSTT(currentProvider)
+                                        loadVoiceModels()
+                                    }
+                                    providerExpanded = false
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text("Vosk") },
+                                onClick = {
+                                    if (currentProvider != TranscriptionProvider.VOSK) {
+                                        currentProvider = TranscriptionProvider.VOSK
+                                        resetState()
+                                        stt.stop()
+                                        stt = CactusSTT(currentProvider)
+                                        loadVoiceModels()
+                                    }
+                                    providerExpanded = false
+                                }
+                            )
+                        }
+                    }
+                    
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isDownloading || isInitializing || isTranscribing || isLoadingModels) {
+                            LinearProgressIndicator(
+                                progress = { downloadPercentage ?: 0f },
+                                modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                    }
+                    
+                    HorizontalDivider()
+                    
                     Text(
-                        "This example demonstrates transcription capabilities using a local speech-to-text model. You can download the model, initialize it, and then transcribe audio input.",
-                        style = MaterialTheme.typography.bodyMedium
+                        "Model Selection",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
+                    
+                    when {
+                        isLoadingModels -> {
+                            Text("Loading models...")
+                        }
+                        isUsingDefaultModel -> {
+                            Text("Using default model: $selectedModel")
+                        }
+                        voiceModels.isEmpty() -> {
+                            Text("No models available")
+                        }
+                        else -> {
+                            var modelExpanded by remember { mutableStateOf(false) }
+                            ExposedDropdownMenuBox(
+                                expanded = modelExpanded,
+                                onExpandedChange = { 
+                                    if (!isModelLoaded) modelExpanded = !modelExpanded 
+                                }
+                            ) {
+                                OutlinedTextField(
+                                    value = voiceModels.find { it.slug == selectedModel }?.let { 
+                                        "${it.slug} (${it.size_mb}MB)"
+                                    } ?: selectedModel,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    enabled = !isModelLoaded,
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = modelExpanded) },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .menuAnchor()
+                                )
+                                
+                                ExposedDropdownMenu(
+                                    expanded = modelExpanded,
+                                    onDismissRequest = { modelExpanded = false }
+                                ) {
+                                    voiceModels.forEach { model ->
+                                        DropdownMenuItem(
+                                            text = { Text("${model.slug} (${model.size_mb}MB)") },
+                                            onClick = {
+                                                selectedModel = model.slug
+                                                modelExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
 
-            // Buttons section
             Button(
-                onClick = { downloadModel() },
-                enabled = !isDownloading,
+                onClick = { downloadAndInitializeModel() },
+                enabled = !isDownloading && !isInitializing && !isModelLoaded && 
+                         !isLoadingModels && (voiceModels.isNotEmpty() || isUsingDefaultModel),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                if (isDownloading) {
+                if (isDownloading || isInitializing) {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         CircularProgressIndicator(
+                            progress = { downloadPercentage ?: 0f },
                             modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
+                            strokeWidth = 2.dp,
                         )
-                        Text("Downloading...")
+                        Text(
+                            if (downloadProgress.isNotEmpty()) downloadProgress 
+                            else if (isDownloading) "Downloading..." 
+                            else "Initializing..."
+                        )
                     }
                 } else {
-                    Text(if (isModelDownloaded) "Model Downloaded ✓" else "Download Model")
+                    Text(if (isModelLoaded) "Model Ready ✓" else "Download & Initialize Model")
                 }
             }
 
-            Button(
-                onClick = { initializeModel() },
-                enabled = !isInitializing && !isDownloading,
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp),
+                contentAlignment = Alignment.Center
             ) {
-                if (isInitializing) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
+                when {
+                    isDownloading && downloadPercentage != null -> {
+                        LinearProgressIndicator(
+                            progress = { downloadPercentage!! },
+                            modifier = Modifier.fillMaxSize(),
                         )
-                        Text("Initializing...")
                     }
-                } else {
-                    Text(if (isModelLoaded) "Model Initialized ✓" else "Initialize Model")
+                    isTranscribing || isPreparingFile -> {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
                 }
             }
 
-            Button(
-                onClick = { transcribeAudio() },
-                enabled = !isDownloading && !isInitializing && !isTranscribing && isModelLoaded,
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                if (isTranscribing) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(16.dp),
-                            strokeWidth = 2.dp
-                        )
-                        Text("Listening...")
+                Button(
+                    onClick = { 
+                        if (isTranscribing) {
+                            stopTranscription()
+                        } else {
+                            transcribeFromMicrophone()
+                        }
+                    },
+                    enabled = !isDownloading && !isInitializing && isModelLoaded && !isLoadingModels,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    if (isTranscribing) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                            )
+                            Text("Stop")
+                        }
+                    } else {
+                        Text("Microphone")
                     }
-                } else {
-                    Text("Transcribe Audio")
+                }
+                
+                Button(
+                    onClick = { transcribeFromFile() },
+                    enabled = !isInitializing && !isTranscribing && !isPreparingFile && isModelLoaded && !isLoadingModels,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text("File")
                 }
             }
 
-            // Output section
             Card(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -231,7 +522,7 @@ fun TranscriptionPage(onBack: () -> Unit) {
                 ) {
                     Text(
                         "Output:",
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
                     
@@ -239,45 +530,42 @@ fun TranscriptionPage(onBack: () -> Unit) {
                     
                     lastResponse?.let { response ->
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                        
                         Text(
-                            "Model Response:",
+                            "Transcription Result:",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
+                        
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
                             )
                         ) {
-                            Text(
-                                text = lastResponse?.text ?: "",
-                                modifier = Modifier.padding(12.dp)
-                            )
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                response.text?.let {
+                                    Text(
+                                        text = it,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                                
+                                response.processingTime?.let { time ->
+                                    Text(
+                                        text = "Processing time: ${time.toInt()}ms",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
                         }
-                        
-                        Spacer(modifier = Modifier.height(12.dp))
                     }
                 }
             }
-        }
-    }
-}
-
-private fun Double.toStringAsFixed(digits: Int): String {
-    return this.toString().let { str ->
-        val dotIndex = str.indexOf('.')
-        if (dotIndex == -1) {
-            str + "." + "0".repeat(digits)
-        } else {
-            val afterDot = str.substring(dotIndex + 1)
-            val formatted = str.substring(0, dotIndex + 1) + 
-                if (afterDot.length >= digits) {
-                    afterDot.substring(0, digits)
-                } else {
-                    afterDot + "0".repeat(digits - afterDot.length)
-                }
-            formatted
         }
     }
 }
