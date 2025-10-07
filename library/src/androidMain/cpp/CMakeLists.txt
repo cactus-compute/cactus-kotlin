@@ -50,34 +50,3 @@ target_include_directories(cactus PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../../commonMain/resources/android/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../../commonMain/resources/ios/include
 )
-
-# Note: whisper JNI functions are now part of the cactus library
-# The separate whisper shared library below is kept for potential future use
-# but the whisper_jni.cpp is compiled into the cactus library above
-
-# Create separate whisper library (currently unused, kept for reference)
-# add_library(whisper SHARED
-#     whisper_jni.cpp
-# )
-
-# Set compilation flags for whisper wrapper
-# target_compile_options(whisper PRIVATE
-#     -fno-limit-debug-info
-#     -fdata-sections
-#     -ffunction-sections
-# )
-
-# target_link_options(whisper PRIVATE -Wl,-z,max-page-size=16384)
-
-# Link libraries for whisper
-# target_link_libraries(whisper
-#     whisper_prebuilt
-#     android
-#     log
-# )
-
-# Include directories for whisper
-# target_include_directories(whisper PRIVATE
-#     ${CMAKE_CURRENT_SOURCE_DIR}/../../commonMain/resources/ios/include
-# )
-
