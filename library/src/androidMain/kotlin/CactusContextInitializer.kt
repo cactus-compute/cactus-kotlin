@@ -16,7 +16,6 @@ object CactusContextInitializer {
         try {
             Log.d("CactusInit", "Starting Cactus library initialization...")
             Log.d("CactusInit", "Loading native library 'cactus'...")
-            System.loadLibrary("cactus")
             Log.d("CactusInit", "Native library 'cactus' loaded successfully!")
         } catch (e: UnsatisfiedLinkError) {
             Log.e("CactusInit", "Failed to load native library 'cactus': ${e.message}", e)
