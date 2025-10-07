@@ -117,7 +117,7 @@ enum class TranscriptionMode {
 }
 
 enum class TranscriptionProvider {
-    VOSK
+    VOSK, WHISPER
 }
 
 enum class InferenceMode {
