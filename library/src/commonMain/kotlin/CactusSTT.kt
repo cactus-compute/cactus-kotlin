@@ -179,7 +179,7 @@ class CactusSTT(
 
     fun isReady(): Boolean = isInitialized
 
-    suspend fun getVoiceModels(): List<VoiceModel> {
+    suspend fun getVoiceModels(provider: TranscriptionProvider = this.provider): List<VoiceModel> {
         if (voiceModels.isEmpty()) {
             val providerName = when (provider) {
                 TranscriptionProvider.VOSK -> "vosk"

@@ -244,18 +244,37 @@ runBlocking {
 
 ## Speech-to-Text (STT)
 
-The `CactusSTT` class provides speech recognition capabilities using Vosk models.
+The `CactusSTT` class provides speech recognition capabilities using on-device models from providers like **Vosk** and **Whisper**.
+
+### Choosing a Transcription Provider
+
+You can select a transcription provider when initializing `CactusSTT`. The available providers are:
+- `TranscriptionProvider.VOSK` (Default): Uses Vosk for transcription.
+- `TranscriptionProvider.WHISPER`: Uses Whisper for transcription.
+
+```kotlin
+import com.cactus.CactusSTT
+import com.cactus.TranscriptionProvider
+
+// Initialize with the VOSK provider (default)
+val sttVosk = CactusSTT() 
+
+// Or explicitly initialize with the WHISPER provider
+val sttWhisper = CactusSTT(TranscriptionProvider.WHISPER)
+```
 
 ### Basic Usage
+
+#### With Vosk
 ```kotlin
 import com.cactus.CactusSTT
 import com.cactus.SpeechRecognitionParams
 import kotlinx.coroutines.runBlocking
 
 runBlocking {
-    val stt = CactusSTT()
+    val stt = CactusSTT() // Defaults to VOSK provider
 
-    // Download STT model (default: vosk-en-us)
+    // Download STT model (e.g., vosk-en-us)
     val downloadSuccess = stt.download("vosk-en-us")
     
     // Initialize the model
@@ -277,11 +296,38 @@ runBlocking {
         }
     }
 
-    // Transcribe from audio file
+    // Stop transcription
+    stt.stop()
+}
+```
+
+#### With Whisper
+```kotlin
+import com.cactus.CactusSTT
+import com.cactus.SpeechRecognitionParams
+import com.cactus.TranscriptionProvider
+import kotlinx.coroutines.runBlocking
+
+runBlocking {
+    val stt = CactusSTT(TranscriptionProvider.WHISPER)
+
+    // Download a Whisper model (e.g., whisper-tiny)
+    val downloadSuccess = stt.download("whisper-tiny")
+    
+    // Initialize the model
+    val initSuccess = stt.init("whisper-tiny")
+
+    // Transcribe from an audio file
     val fileResult = stt.transcribe(
-        SpeechRecognitionParams(),
+        params = SpeechRecognitionParams(),
         filePath = "/path/to/audio.wav"
     )
+
+    fileResult?.let { transcription ->
+        if (transcription.success) {
+            println("Transcribed: ${transcription.text}")
+        }
+    }
 
     // Stop transcription
     stt.stop()
@@ -309,30 +355,36 @@ val fileResult = stt.transcribe(
 ```
 
 ### Available Voice Models
+You can get a list of available models for the configured provider.
 ```kotlin
-// Get list of available voice models
-stt.getVoiceModels()
+// For VOSK (default)
+val voskModels = CactusSTT().getVoiceModels()
 
-// Check if model is downloaded
+// For WHISPER
+val whisperModels = CactusSTT().getVoiceModels(TranscriptionProvider.WHISPER)
+
+// Check if a model is downloaded
 stt.isModelDownloaded("vosk-en-us")
 ```
 
 ### STT API Reference
 
 #### CactusSTT Class
-- `suspend fun download(model: String = "vosk-en-us"): Boolean` - Download STT model
-- `suspend fun init(model: String?): Boolean` - Initialize STT model
-- `suspend fun transcribe(params: SpeechRecognitionParams = SpeechRecognitionParams(), filePath: String? = null, mode: TranscriptionMode = TranscriptionMode.LOCAL, apiKey: String? = null): SpeechRecognitionResult?` - Transcribe speech. Supports different transcription modes (local, remote, and fallbacks).
+- `CactusSTT(provider: TranscriptionProvider = TranscriptionProvider.VOSK)` - Constructor to specify the transcription provider.
+- `suspend fun download(model: String): Boolean` - Download an STT model (e.g., "vosk-en-us" or "whisper-tiny-en").
+- `suspend fun init(model: String): Boolean` - Initialize an STT model for transcription.
+- `suspend fun transcribe(params: SpeechRecognitionParams = SpeechRecognitionParams(), filePath: String? = null, mode: TranscriptionMode = TranscriptionMode.LOCAL, apiKey: String? = null): SpeechRecognitionResult?` - Transcribe speech from microphone or file. Supports different transcription modes.
 - `suspend fun warmUpWispr(apiKey: String)` - Warms up the remote Wispr service for lower latency.
-- `fun stop()` - Stop ongoing transcription
-- `fun isReady(): Boolean` - Check if STT is ready
-- `suspend fun getVoiceModels(): List<VoiceModel>` - Get available voice models
-- `suspend fun isModelDownloaded(modelName: String): Boolean` - Check if model is downloaded
+- `fun stop()` - Stop ongoing transcription.
+- `fun isReady(): Boolean` - Check if the STT service is initialized and ready.
+- `suspend fun getVoiceModels(provider: TranscriptionProvider = TranscriptionProvider.VOSK): List<VoiceModel>` - Get a list of available voice models for the configured provider.
+- `suspend fun isModelDownloaded(modelName: String): Boolean` - Check if a specific model has been downloaded.
 
 #### Data Classes
-- `SpeechRecognitionParams(maxSilenceDuration: Long, maxDuration: Long, sampleRate: Int)` - Speech recognition parameters
-- `SpeechRecognitionResult(success: Boolean, text: String?, processingTime: Double?)` - Transcription result
-- `VoiceModel` - Information about available voice models
+- `TranscriptionProvider` - Enum for selecting the provider (`VOSK`, `WHISPER`).
+- `SpeechRecognitionParams(maxSilenceDuration: Long, maxDuration: Long, sampleRate: Int)` - Parameters for controlling speech recognition.
+- `SpeechRecognitionResult(success: Boolean, text: String?, processingTime: Double?)` - The result of a transcription.
+- `VoiceModel` - Contains information about an available voice model.
 
 ## Platform-Specific Setup
 
