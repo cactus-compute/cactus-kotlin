@@ -1,3 +1,4 @@
 headers = vosk_api.h
 staticLibraries = libvosk.a
 libraryPaths = ../../../commonMain/resources/ios/lib/ios-arm64 ../../../commonMain/resources/ios/lib/ios-arm64-simulator
+compilerOpts = -framework Foundation -framework Add -framework Metal -framework MetalKit
