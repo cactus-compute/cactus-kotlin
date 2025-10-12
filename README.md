@@ -40,7 +40,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation("com.cactus:library:0.3-beta.1")
+                implementation("com.cactus:library:0.3-beta.4")
             }
         }
     }
