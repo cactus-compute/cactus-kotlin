@@ -71,7 +71,8 @@ class CactusLM {
         val localCompletion = suspend local@{
             val model = params.model ?: _lastDownloadedModel
             val currentHandle = getValidatedHandle(model)
-            
+            val quantization = getModel(model)?.quantization ?: 8
+
             if (currentHandle == null) {
                 if (Telemetry.isInitialized) {
                     Telemetry.instance?.logCompletion(
@@ -86,7 +87,7 @@ class CactusLM {
             try {
                 val toolsJson = params.tools.toToolsJson()
                 println("Tools JSON: $toolsJson")
-                CactusContext.completion(currentHandle, messages, params, toolsJson, onToken)
+                CactusContext.completion(currentHandle, messages, params, toolsJson, onToken, quantization)
             } catch (e: Exception) {
                 if (Telemetry.isInitialized) {
                     val initParams = CactusInitParams(model = _lastDownloadedModel)
@@ -137,9 +138,12 @@ class CactusLM {
 
     suspend fun generateEmbedding(
         text: String,
-        bufferSize: Int = 2048
+        modelName: String? = null
     ): CactusEmbeddingResult? {
-        val currentHandle = getValidatedHandle()
+        val model = modelName ?: _lastDownloadedModel
+        val currentHandle = getValidatedHandle(model)
+        val quantization = getModel(model)?.quantization ?: 8
+
         if (currentHandle == null) {
             println("CactusLM: Context not initialized")
             return null
@@ -148,7 +152,7 @@ class CactusLM {
         try {
             println("CactusLM: Generating embedding for text: ${if (text.length > 50) text.substring(0, 50) + "..." else text}")
             
-            val result = CactusContext.generateEmbedding(currentHandle, text, bufferSize)
+            val result = CactusContext.generateEmbedding(currentHandle, text, quantization)
             
             println("CactusLM: Embedding generation ${if (result.success) "completed successfully" else "failed"}: " +
                     "dimension=${result.dimension}, " +

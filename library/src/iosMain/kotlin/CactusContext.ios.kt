@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import platform.CoreCrypto.CC_SHA1
 import platform.CoreCrypto.CC_SHA1_DIGEST_LENGTH
 import platform.Foundation.NSBundle
+import kotlin.math.max
 
 // Global variables for iOS callback handling
 private var currentStreamingCallback: CactusStreamingCallback? = null
@@ -42,13 +43,14 @@ actual object CactusContext {
         messages: List<ChatMessage>,
         params: CactusCompletionParams,
         tools: String?,
-        onToken: CactusStreamingCallback?
+        onToken: CactusStreamingCallback?,
+        quantization: Int
     ): CactusCompletionResult = withContext(Dispatchers.Default) {
         val messagesJson = CactusPayloadBuilder.buildMessagesJson(messages)
         val optionsJson = CactusPayloadBuilder.buildOptionsJson(params)
 
         return@withContext memScoped {
-            val responseBuffer = allocArray<ByteVar>(params.bufferSize)
+            val responseBuffer = allocArray<ByteVar>(max(params.maxTokens * quantization, 1024))
             
             // Set up streaming if callback is provided
             val fullResponse = if (onToken != null) {
@@ -67,7 +69,7 @@ actual object CactusContext {
                 handle.toCPointer(),
                 messagesJson,
                 responseBuffer,
-                params.bufferSize.convert(),
+                max(params.maxTokens * quantization, 1024).convert(),
                 optionsJson,
                 tools,
                 callback,
@@ -101,9 +103,10 @@ actual object CactusContext {
     actual suspend fun generateEmbedding(
         handle: Long,
         text: String,
-        bufferSize: Int
+        quantization: Int
     ): CactusEmbeddingResult = withContext(Dispatchers.Default) {
         return@withContext memScoped {
+            val bufferSize = max(text.length * quantization, 1024)
             println("CactusContext: Generating embedding for text: ${if (text.length > 50) text.substring(0, 50) + "..." else text}")
             println("CactusContext: Buffer allocated for $bufferSize float elements")
 

@@ -6,6 +6,7 @@ import com.cactus.internal.CactusPayloadBuilder
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
+import kotlin.math.max
 
 
 actual object CactusContext {
@@ -42,12 +43,13 @@ actual object CactusContext {
         messages: List<ChatMessage>,
         params: CactusCompletionParams,
         tools: String?,
-        onToken: CactusStreamingCallback?
+        onToken: CactusStreamingCallback?,
+        quantization: Int
     ): CactusCompletionResult = withContext(Dispatchers.Default) {
         val messagesJson = CactusPayloadBuilder.buildMessagesJson(messages)
         val optionsJson = CactusPayloadBuilder.buildOptionsJson(params)
 
-        val responseBuffer = ByteArray(params.bufferSize)
+        val responseBuffer = ByteArray(max(params.maxTokens * quantization, 1024))
         val fullResponse = StringBuilder()
 
         // Create callback wrapper if onToken is provided
@@ -62,7 +64,7 @@ actual object CactusContext {
             handle,
             messagesJson,
             responseBuffer,
-            params.bufferSize,
+            max(params.maxTokens * 8, 1024),
             optionsJson,
             tools,
             callback,
@@ -93,8 +95,9 @@ actual object CactusContext {
     actual suspend fun generateEmbedding(
         handle: Long,
         text: String,
-        bufferSize: Int
+        quantization: Int
     ): CactusEmbeddingResult = withContext(Dispatchers.Default) {
+        val bufferSize = max(text.length * quantization, 1024)
         Log.d("Cactus", "Generating embedding for text: ${if (text.length > 50) text.substring(0, 50) + "..." else text}")
         Log.d("Cactus", "Buffer allocated for $bufferSize float elements")
 
