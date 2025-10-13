@@ -16,7 +16,8 @@ data class CactusCompletionParams(
     val bufferSize: Int = 2048,
     val tools: List<CactusTool> = emptyList(),
     val mode: InferenceMode = InferenceMode.LOCAL,
-    val cactusToken: String? = null
+    val cactusToken: String? = null,
+    val model: String? = null
 )
 
 data class CactusCompletionResult(

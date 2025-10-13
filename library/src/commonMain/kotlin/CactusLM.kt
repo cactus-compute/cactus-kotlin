@@ -37,11 +37,26 @@ class CactusLM {
 
         _handle = CactusContext.initContext(modelPath, (params.contextSize ?: 2048).toUInt())
         _lastDownloadedModel = modelFolder
+        
+        // If initialization failed and model is not downloaded, try to download first
+        if (_handle == null && !modelExists(modelFolder)) {
+            println("Failed to initialize model context with model at $modelPath, trying to download the model first.")
+            val downloadSuccess = downloadModel(model = modelFolder)
+            if (downloadSuccess) {
+                return initializeModel(params)
+            }
+        }
+        
         if (Telemetry.isInitialized) {
             val updatedParams = params.copy(model = modelFolder)
             val message = if (_handle != null) null else "Failed to initialize model at path: $modelPath"
             Telemetry.instance?.logInit(_handle != null, updatedParams, message)
         }
+        
+        if (_handle == null) {
+            throw Exception("Failed to initialize model context with model at $modelPath")
+        }
+        
         return _handle != null
     }
 
@@ -54,12 +69,14 @@ class CactusLM {
         var result: CactusCompletionResult?
 
         val localCompletion = suspend local@{
-            val currentHandle = _handle
+            val model = params.model ?: _lastDownloadedModel
+            val currentHandle = getValidatedHandle(model)
+            
             if (currentHandle == null) {
                 if (Telemetry.isInitialized) {
                     Telemetry.instance?.logCompletion(
                         CactusCompletionResult(success = false),
-                        CactusInitParams(),
+                        CactusInitParams(model = model),
                         message = "Context not initialized",
                     )
                 }
@@ -122,7 +139,7 @@ class CactusLM {
         text: String,
         bufferSize: Int = 2048
     ): CactusEmbeddingResult? {
-        val currentHandle = _handle
+        val currentHandle = getValidatedHandle()
         if (currentHandle == null) {
             println("CactusLM: Context not initialized")
             return null
@@ -171,6 +188,17 @@ class CactusLM {
     }
 
     fun isLoaded(): Boolean = _handle != null
+
+    private suspend fun getValidatedHandle(model: String? = null): Long? {
+        if (_handle != null && (model == null || model == _lastDownloadedModel)) {
+            return _handle
+        }
+        
+        val targetModel = model ?: _lastDownloadedModel
+        
+        val initSuccess = initializeModel(CactusInitParams(model = targetModel))
+        return if (initSuccess) _handle else null
+    }
 
     suspend fun getModels(): List<CactusModel> {
         if (models.isEmpty()) {
