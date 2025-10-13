@@ -13,7 +13,6 @@ data class CactusCompletionParams(
     val topP: Double = 0.95,
     val maxTokens: Int = 200,
     val stopSequences: List<String> = listOf("<|im_end|>", "<end_of_turn>"),
-    val bufferSize: Int = 2048,
     val tools: List<CactusTool> = emptyList(),
     val mode: InferenceMode = InferenceMode.LOCAL,
     val cactusToken: String? = null,
@@ -60,7 +59,8 @@ data class CactusModel(
     val supports_tool_calling: Boolean,
     val supports_vision: Boolean,
     val name: String,
-    var isDownloaded: Boolean = false
+    var isDownloaded: Boolean = false,
+    val quantization: Int = 8
 )
 
 @Serializable

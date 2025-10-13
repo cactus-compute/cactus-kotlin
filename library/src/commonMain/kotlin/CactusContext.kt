@@ -10,11 +10,12 @@ expect object CactusContext {
         messages: List<ChatMessage>,
         params: CactusCompletionParams,
         tools: String? = null,
-        onToken: CactusStreamingCallback? = null
+        onToken: CactusStreamingCallback? = null,
+        quantization: Int
     ): CactusCompletionResult
     suspend fun generateEmbedding(
         handle: Long,
         text: String,
-        bufferSize: Int = 2048
+        quantization: Int = 8
     ): CactusEmbeddingResult
 }
