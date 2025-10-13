@@ -39,7 +39,7 @@ internal object CactusPayloadBuilder {
             append("\"max_tokens\":${params.maxTokens}")
             if (params.stopSequences.isNotEmpty()) {
                 append(
-                    ",\"stop\":[${params.stopSequences.joinToString(",") {
+                    ",\"stop_sequences\":[${params.stopSequences.joinToString(",") {
                             "\"${escapeJsonString(it)}\""
                         }}}]"
                 )
