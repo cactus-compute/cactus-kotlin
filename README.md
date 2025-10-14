@@ -55,6 +55,23 @@ kotlin {
 
 ## Getting Started
 
+### Android Context Initialization (Android Only - Required)
+For Android, initialize the Cactus context in your Activity's `onCreate()` method before using any SDK functionality:
+```kotlin
+import com.cactus.CactusContextInitializer
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        
+        // Initialize Cactus context (Android only - required)
+        CactusContextInitializer.initialize(this)
+        
+        // ... rest of your code
+    }
+}
+```
+
 ### Telemetry Setup (Optional)
 ```kotlin
 import com.cactus.services.CactusTelemetry
