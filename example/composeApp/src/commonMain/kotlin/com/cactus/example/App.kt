@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.cactus.services.CactusTelemetry
 import com.cactus.example.theme.AppTheme
 import com.cactus.example.pages.BasicCompletionPage
+import com.cactus.example.pages.ChatPage
 import com.cactus.example.pages.EmbeddingPage
 import com.cactus.example.pages.FetchModelsPage
 import com.cactus.example.pages.FunctionCallingPage
@@ -80,6 +81,10 @@ fun App() {
             title = "Transcription",
             description = "Audio transcription capabilities"
         ) { TranscriptionPage { currentPage = null } },
+        ExampleItem(
+            title = "Chat",
+            description = "Chat with cactus"
+        ) { ChatPage { currentPage = null } },
     )
 
     AppTheme {
