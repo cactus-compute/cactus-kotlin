@@ -20,7 +20,8 @@ data class WisprFlowRequest(
 
 @Serializable
 data class WisprFlowResponse(
-    val text: String
+    val text: String,
+    val total_time: Double
 )
 
 class WisprFlow {
@@ -75,6 +76,7 @@ class WisprFlow {
                 val wisprResponse: WisprFlowResponse = response.body()
                 result = SpeechRecognitionResult(
                     text = wisprResponse.text,
+                    processingTime = wisprResponse.total_time * 1000, // convert to ms
                     success = true,
                     eventSuccess = true
                 )
