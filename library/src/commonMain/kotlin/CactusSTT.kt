@@ -3,7 +3,6 @@ package com.cactus
 import com.cactus.services.Supabase
 import com.cactus.services.Telemetry
 import kotlin.time.TimeSource
-import com.cactus.WisprFlow
 
 class CactusSTT(
     private val provider: TranscriptionProvider = TranscriptionProvider.VOSK
@@ -201,7 +200,13 @@ class CactusSTT(
             println("No data found for model: $lastDownloadedModelName")
             return false
         }
-        return modelExists(currentModel.slug) && modelExists(spkModelFolder)
+        if (!modelExists(currentModel.slug)) {
+            return false
+        }
+        if (currentModel.provider == "vosk") {
+            return modelExists(spkModelFolder)
+        }
+        return true
     }
 
     private suspend fun getModel(slug: String): VoiceModel? {
