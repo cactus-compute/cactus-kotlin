@@ -19,7 +19,7 @@ class CactusSTT(
     private val spkModelFolder: String = "vosk-model-spk-0.4"
     private val spkModelUrl: String = "https://alphacephei.com/vosk/models/vosk-model-spk-0.4.zip"
 
-    private var voiceModels = listOf<VoiceModel>()
+    private var voiceModels = mutableMapOf<TranscriptionProvider, List<VoiceModel>>()
 
     suspend fun download(
         model: String = lastDownloadedModelName
@@ -180,17 +180,18 @@ class CactusSTT(
     fun isReady(): Boolean = isInitialized
 
     suspend fun getVoiceModels(provider: TranscriptionProvider = this.provider): List<VoiceModel> {
-        if (voiceModels.isEmpty()) {
+        return voiceModels[provider] ?: run {
             val providerName = when (provider) {
                 TranscriptionProvider.VOSK -> "vosk"
                 TranscriptionProvider.WHISPER -> "whisper"
             }
-            voiceModels = Supabase.fetchVoiceModels(providerName)
-            for (model in voiceModels) {
+            val newModels = Supabase.fetchVoiceModels(providerName)
+            newModels.onEach { model ->
                 model.isDownloaded = modelExists(model.slug)
             }
+            voiceModels[provider] = newModels
+            newModels
         }
-        return voiceModels
     }
 
     suspend fun isModelDownloaded(
@@ -204,9 +205,7 @@ class CactusSTT(
     }
 
     private suspend fun getModel(slug: String): VoiceModel? {
-        if (voiceModels.isEmpty()) {
-            voiceModels = getVoiceModels()
-        }
-        return voiceModels.firstOrNull { it.slug == slug }
+        val modelsForProvider = getVoiceModels(provider)
+        return modelsForProvider.firstOrNull { it.slug == slug }
     }
 }
