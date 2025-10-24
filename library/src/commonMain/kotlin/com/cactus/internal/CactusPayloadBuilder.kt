@@ -33,9 +33,15 @@ internal object CactusPayloadBuilder {
     fun buildOptionsJson(params: CactusCompletionParams): String {
         return buildString {
             append("{")
-            append("\"temperature\":${params.temperature},")
-            append("\"top_k\":${params.topK},")
-            append("\"top_p\":${params.topP},")
+            params.temperature?.let {
+                append("\"temperature\":${params.temperature},")
+            }
+            params.topK?.let {
+                append("\"top_k\":${params.topK},")
+            }
+            params.topP?.let {
+                append("\"top_p\":${params.topP},")
+            }
             append("\"max_tokens\":${params.maxTokens}")
             if (params.stopSequences.isNotEmpty()) {
                 append(

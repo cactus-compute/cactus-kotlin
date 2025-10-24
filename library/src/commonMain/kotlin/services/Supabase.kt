@@ -127,7 +127,7 @@ object Supabase {
                 header("Authorization", "Bearer $SUPABASE_KEY")
                 header("Accept-Profile", "cactus")
                 parameter("select", "*")
-                parameter("isLive", "eq.true")
+                parameter("is_live", "eq.true")
             }
 
             if (response.status == HttpStatusCode.OK) {
