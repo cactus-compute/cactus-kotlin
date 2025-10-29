@@ -18,11 +18,11 @@ import kotlin.math.round
 data class OpenRouterRequest(
     val model: String = "qwen/qwen-2.5-7b-instruct",
     val messages: List<ChatMessage>,
-    val temperature: Float = 0.1f,
+    val temperature: Float? = 0.1f,
     @SerialName("max_tokens")
     val maxTokens: Int = 200,
     @SerialName("top_p")
-    val topP: Float = 0.95f,
+    val topP: Float? = 0.95f,
     val stop: List<String> = emptyList(),
     val stream: Boolean = false
 )
@@ -78,9 +78,9 @@ class OpenRouterModule {
 
         val requestBody = OpenRouterRequest(
             messages = messages,
-            temperature = params.temperature.toFloat(),
+            temperature = params.temperature?.toFloat(),
             maxTokens = params.maxTokens,
-            topP = params.topP.toFloat(),
+            topP = params.topP?.toFloat(),
             stop = params.stopSequences
         )
 
@@ -133,9 +133,9 @@ class OpenRouterModule {
     ): CactusCompletionResult {
         val requestBody = OpenRouterRequest(
             messages = messages,
-            temperature = params.temperature.toFloat(),
+            temperature = params.temperature?.toFloat(),
             maxTokens = params.maxTokens,
-            topP = params.topP.toFloat(),
+            topP = params.topP?.toFloat(),
             stop = params.stopSequences,
             stream = true
         )
