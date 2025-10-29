@@ -280,8 +280,8 @@ fun FunctionCallingPage(onBack: () -> Unit) {
                             )
                         ) {
                             Text(
-                                text = "Tool Call: ${response.toolCalls?.first()?.name} \n" +
-                                        "Arguments: ${response.toolCalls?.first()?.arguments}",
+                                text = "Tool Call: ${response.toolCalls?.firstOrNull()?.name} \n" +
+                                        "Arguments: ${response.toolCalls?.firstOrNull()?.arguments}",
                                 modifier = Modifier.padding(12.dp)
                             )
                         }
