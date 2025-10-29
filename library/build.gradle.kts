@@ -18,7 +18,7 @@ plugins {
 }
 
 group = "com.cactus"
-version = "0.3-beta.5"
+version = "0.3.6-beta"
 
 buildConfig {
     packageName("com.cactus")
