@@ -33,7 +33,7 @@ internal object CactusJsonParser {
             jsonResponse["decode_tokens"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
         val totalTokens =
             jsonResponse["total_tokens"]?.jsonPrimitive?.content?.toIntOrNull() ?: 0
-        val toolCalls = jsonResponse["tool_calls"]?.let { element ->
+        val toolCalls = jsonResponse["function_calls"]?.let { element ->
             json.decodeFromJsonElement<List<ToolCall>>(element)
         } ?: emptyList()
 
