@@ -13,6 +13,5 @@ xcuserdata
 *.gpg
 library/libs/ios/cactus.xcframework
 library/libs/android/jniLibs
-example/iosApp/iosApp
 library/src/commonMain/resources/ios/cactus.xcframework
 library/src/commonMain/resources/android/jniLibs
