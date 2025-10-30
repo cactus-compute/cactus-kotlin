@@ -7,44 +7,42 @@ import kotlin.time.TimeSource
 
 class CactusLM {
     private var _handle: Long? = null
-    private var _lastDownloadedModel: String = "qwen3-0.6"
-    private var models = listOf<CactusModel>()
+    private var _lastInitializedModel: String = "qwen3-0.6"
     private val openRouterModule = OpenRouterModule()
     private val timeSource = TimeSource.Monotonic
 
     suspend fun downloadModel(
-        model: String = _lastDownloadedModel
-    ): Boolean {
+        model: String = _lastInitializedModel
+    ) {
         if (modelExists(model)) {
-            return true
+            return
         }
-        val currentModel  = getModel(model) ?: run {
-            println("No data found for model: $model")
-            return false
+
+        val currentModel  = Supabase.getModel(model) ?: run {
+            throw Exception("Failed to get model $model")
         }
+
         val actualFilename = currentModel.download_url.split('?').first().split('/').last()
         val task = DownloadTask(currentModel.download_url, actualFilename, currentModel.slug)
+
         val success = downloadAndExtractModels(listOf(task))
-        if (success) {
-            _lastDownloadedModel = currentModel.slug
+        if (!success) {
+            throw Exception("Failed to download and extract model $model from ${currentModel.download_url}")
         }
-        return success
     }
 
-    suspend fun initializeModel(params: CactusInitParams): Boolean {
-        val modelFolder = params.model ?: _lastDownloadedModel
+    suspend fun initializeModel(params: CactusInitParams) {
+        val modelFolder = params.model ?: _lastInitializedModel
         val modelPath = getModelPath(modelFolder)
 
         _handle = CactusContext.initContext(modelPath, (params.contextSize ?: 2048).toUInt())
-        _lastDownloadedModel = modelFolder
+        _lastInitializedModel = modelFolder
         
         // If initialization failed and model is not downloaded, try to download first
         if (_handle == null && !modelExists(modelFolder)) {
             println("Failed to initialize model context with model at $modelPath, trying to download the model first.")
-            val downloadSuccess = downloadModel(model = modelFolder)
-            if (downloadSuccess) {
-                return initializeModel(params)
-            }
+            downloadModel(model = modelFolder)
+            return initializeModel(params)
         }
         
         if (Telemetry.isInitialized) {
@@ -56,8 +54,7 @@ class CactusLM {
         if (_handle == null) {
             throw Exception("Failed to initialize model context with model at $modelPath")
         }
-        
-        return _handle != null
+        _lastInitializedModel = modelFolder
     }
 
     suspend fun generateCompletion(
@@ -69,9 +66,9 @@ class CactusLM {
         var result: CactusCompletionResult?
 
         val localCompletion = suspend local@{
-            val model = params.model ?: _lastDownloadedModel
+            val model = params.model ?: _lastInitializedModel
             val currentHandle = getValidatedHandle(model)
-            val quantization = getModel(model)?.quantization ?: 8
+            val quantization = Supabase.getModel(model)?.quantization ?: 8
 
             if (currentHandle == null) {
                 if (Telemetry.isInitialized) {
@@ -86,11 +83,10 @@ class CactusLM {
 
             try {
                 val toolsJson = params.tools.toToolsJson()
-                println("Tools JSON: $toolsJson")
                 CactusContext.completion(currentHandle, messages, params, toolsJson, onToken, quantization)
             } catch (e: Exception) {
                 if (Telemetry.isInitialized) {
-                    val initParams = CactusInitParams(model = _lastDownloadedModel)
+                    val initParams = CactusInitParams(model = _lastInitializedModel)
                     Telemetry.instance?.logCompletion(CactusCompletionResult(success = false), initParams, message = e.message)
                 }
                 throw e
@@ -121,7 +117,7 @@ class CactusLM {
 
         if (Telemetry.isInitialized) {
             val initParams = CactusInitParams(
-                model = _lastDownloadedModel,
+                model = _lastInitializedModel,
             )
             val message = if (result?.success == true) null else result?.response
             Telemetry.instance?.logCompletion(
@@ -140,9 +136,9 @@ class CactusLM {
         text: String,
         modelName: String? = null
     ): CactusEmbeddingResult? {
-        val model = modelName ?: _lastDownloadedModel
+        val model = modelName ?: _lastInitializedModel
         val currentHandle = getValidatedHandle(model)
-        val quantization = getModel(model)?.quantization ?: 8
+        val quantization = Supabase.getModel(model)?.quantization ?: 8
 
         if (currentHandle == null) {
             println("CactusLM: Context not initialized")
@@ -160,7 +156,7 @@ class CactusLM {
 
             if (Telemetry.isInitialized) {
                 val initParams = CactusInitParams(
-                    model = _lastDownloadedModel,
+                    model = _lastInitializedModel,
                 )
                 Telemetry.instance?.logEmbedding(result, initParams)
             }
@@ -170,7 +166,7 @@ class CactusLM {
             println("CactusLM: Exception during embedding generation: $e")
             if (Telemetry.isInitialized) {
                 val initParams = CactusInitParams(
-                    model = _lastDownloadedModel,
+                    model = _lastInitializedModel,
                 )
                 Telemetry.instance?.logEmbedding(CactusEmbeddingResult(success = false), initParams, message = e.message)
             }
@@ -193,32 +189,17 @@ class CactusLM {
 
     fun isLoaded(): Boolean = _handle != null
 
-    private suspend fun getValidatedHandle(model: String? = null): Long? {
-        if (_handle != null && (model == null || model == _lastDownloadedModel)) {
+    suspend fun getModels(): List<CactusModel> {
+        return Supabase.fetchModels()
+    }
+
+    private suspend fun getValidatedHandle(model: String): Long? {
+        if (_handle != null && (model == _lastInitializedModel)) {
             return _handle
         }
-        
-        val targetModel = model ?: _lastDownloadedModel
-        
-        val initSuccess = initializeModel(CactusInitParams(model = targetModel))
-        return if (initSuccess) _handle else null
-    }
 
-    suspend fun getModels(): List<CactusModel> {
-        if (models.isEmpty()) {
-            models = Supabase.fetchModels()
-            for (model in models) {
-                model.isDownloaded = modelExists(model.slug)
-            }
-        }
-        return models
-    }
-
-    private suspend fun getModel(slug: String): CactusModel? {
-        if (models.isEmpty()) {
-            models = getModels()
-        }
-        return models.firstOrNull { it.slug == slug }
+        initializeModel(CactusInitParams(model = model))
+        return _handle
     }
 }
 

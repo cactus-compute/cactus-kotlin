@@ -8,6 +8,7 @@ typealias CactusProgressCallback = (Double?, String, Boolean) -> Unit
 typealias CactusStreamingCallback = (token: String, tokenId: UInt) -> Unit
 
 data class CactusCompletionParams(
+    val model: String? = null,
     val temperature: Double? = null,
     val topK: Int? = null,
     val topP: Double? = null,
@@ -15,8 +16,7 @@ data class CactusCompletionParams(
     val stopSequences: List<String> = listOf("<|im_end|>", "<end_of_turn>"),
     val tools: List<CactusTool> = emptyList(),
     val mode: InferenceMode = InferenceMode.LOCAL,
-    val cactusToken: String? = null,
-    val model: String? = null
+    val cactusToken: String? = null
 )
 
 data class CactusCompletionResult(
