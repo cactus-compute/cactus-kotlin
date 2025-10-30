@@ -9,26 +9,26 @@ internal actual object ModelCache {
     private const val MODELS_KEY = "cactus_models"
     private const val VOICE_MODELS_KEY = "cactus_voice_models"
 
-    actual suspend fun saveModels(models: List<CactusModel>) {
+    actual suspend fun saveModel(model: CactusModel) {
         try {
             val userDefaults = NSUserDefaults.standardUserDefaults
-            val jsonString = Json.encodeToString(models)
-            userDefaults.setObject(jsonString, forKey = MODELS_KEY)
+            val jsonString = Json.encodeToString(model)
+            userDefaults.setObject(jsonString, forKey = "${MODELS_KEY}_${model.slug}")
             userDefaults.synchronize()
         } catch (e: Exception) {
             println("Error saving models to cache: $e")
         }
     }
 
-    actual suspend fun loadModels(): List<CactusModel> {
+    actual suspend fun loadModel(slug: String): CactusModel? {
         return try {
             val userDefaults = NSUserDefaults.standardUserDefaults
-            val jsonString = userDefaults.stringForKey(MODELS_KEY)
-            if (jsonString.isNullOrEmpty()) return emptyList()
-            Json.decodeFromString<List<CactusModel>>(jsonString)
+            val jsonString = userDefaults.stringForKey("${MODELS_KEY}_${slug}")
+            if (jsonString.isNullOrEmpty()) return null
+            Json.decodeFromString<CactusModel>(jsonString)
         } catch (e: Exception) {
             println("Error loading models from cache: $e")
-            emptyList()
+            null
         }
     }
 

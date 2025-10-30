@@ -12,6 +12,7 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import com.cactus.BuildConfig
 
 /**
  * Device registration request
@@ -120,26 +121,40 @@ object Supabase {
         }
     }
 
-    suspend fun fetchModels(): List<CactusModel> {
+    suspend fun getModel(slug: String): CactusModel? {
+        ModelCache.loadModel(slug)?.let { return it }
+
         return try {
-            val response = client.get("$SUPABASE_URL/rest/v1/models") {
-                header("apikey", SUPABASE_KEY)
+            val response = client.get("$SUPABASE_URL/functions/v1/get-models?slug=$slug&sdk_name=kotlin&sdk_version=${BuildConfig.FRAMEWORK_VERSION}") {
                 header("Authorization", "Bearer $SUPABASE_KEY")
-                header("Accept-Profile", "cactus")
-                parameter("select", "*")
-                parameter("is_live", "eq.true")
             }
 
             if (response.status == HttpStatusCode.OK) {
-                val cactusModels = response.body<List<CactusModel>>()
-                ModelCache.saveModels(cactusModels)
-                cactusModels
+                val model = response.body<CactusModel>()
+                ModelCache.saveModel(model)
+                model
             } else {
-                ModelCache.loadModels()
+                null
             }
         } catch (e: Exception) {
             println("Error fetching models: $e")
-            ModelCache.loadModels()
+            null
+        }
+    }
+
+    suspend fun fetchModels(): List<CactusModel> {
+        return try {
+            val response = client.get("$SUPABASE_URL/functions/v1/get-models&sdk_name=kotlin&sdk_version=${BuildConfig.FRAMEWORK_VERSION}") {
+                header("Authorization", "Bearer $SUPABASE_KEY")
+            }
+
+            if (response.status == HttpStatusCode.OK) {
+                response.body<List<CactusModel>>()
+            }
+            emptyList()
+        } catch (e: Exception) {
+            println("Error fetching models: $e")
+            emptyList()
         }
     }
 

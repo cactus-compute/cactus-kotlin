@@ -18,25 +18,25 @@ internal actual object ModelCache {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     }
 
-    actual suspend fun saveModels(models: List<CactusModel>) {
+    actual suspend fun saveModel(model: CactusModel) {
         try {
             val prefs = getSharedPreferences()
-            val jsonString = Json.encodeToString(models)
-            prefs.edit { putString(MODELS_KEY, jsonString) }
+            val jsonString = Json.encodeToString(model)
+            prefs.edit { putString("${MODELS_KEY}_${model.slug}", jsonString) }
         } catch (e: Exception) {
             println("Error saving models to cache: $e")
         }
     }
 
-    actual suspend fun loadModels(): List<CactusModel> {
+    actual suspend fun loadModel(slug: String): CactusModel? {
         return try {
             val prefs = getSharedPreferences()
-            val jsonString = prefs.getString(MODELS_KEY, null)
-            if (jsonString.isNullOrEmpty()) return emptyList()
-            Json.decodeFromString<List<CactusModel>>(jsonString)
+            val jsonString = prefs.getString("${MODELS_KEY}_${slug}", null)
+            if (jsonString.isNullOrEmpty()) return null
+            Json.decodeFromString<CactusModel>(jsonString)
         } catch (e: Exception) {
             println("Error loading models from cache: $e")
-            emptyList()
+            null
         }
     }
 
