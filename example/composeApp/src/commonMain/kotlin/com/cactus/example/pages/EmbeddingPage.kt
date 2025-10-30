@@ -35,14 +35,9 @@ fun EmbeddingPage(onBack: () -> Unit) {
             outputText = "Downloading model..."
             
             try {
-                val downloadSuccess = lm.downloadModel("qwen3-0.6-embed")
-                
-                if (downloadSuccess) {
-                    isModelDownloaded = true
-                    outputText = "Model downloaded successfully! Click \"Initialize Model\" to load it."
-                } else {
-                    outputText = "Failed to download model."
-                }
+                lm.downloadModel()
+                isModelDownloaded = true
+                outputText = "Model downloaded successfully! Click \"Initialize Model\" to load it."
             } catch (e: Exception) {
                 outputText = "Error downloading model: ${e.message}"
             } finally {
@@ -57,13 +52,9 @@ fun EmbeddingPage(onBack: () -> Unit) {
             outputText = "Initializing model..."
             
             try {
-                val loadSuccess = lm.initializeModel(CactusInitParams(model = "qwen3-0.6-embed"))
-                if (loadSuccess) {
-                    isModelLoaded = true
-                    outputText = "Model initialized successfully! Ready to generate embeddings."
-                } else {
-                    outputText = "Failed to initialize model."
-                }
+                lm.initializeModel(CactusInitParams())
+                isModelLoaded = true
+                outputText = "Model initialized successfully! Ready to generate completions."
             } catch (e: Exception) {
                 outputText = "Error initializing model: ${e.message}"
             } finally {

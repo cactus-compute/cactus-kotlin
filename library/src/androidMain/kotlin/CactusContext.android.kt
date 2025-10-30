@@ -50,13 +50,11 @@ actual object CactusContext {
         val optionsJson = CactusPayloadBuilder.buildOptionsJson(params)
 
         val responseBuffer = ByteArray(max(params.maxTokens * quantization, 1024))
-        val fullResponse = StringBuilder()
 
         // Create callback wrapper if onToken is provided
         val callback: ((String, Int) -> Unit)? = if (onToken != null) {
             { token, tokenId ->
                 onToken(token, tokenId.toUInt())
-                fullResponse.append(token)
             }
         } else null
 
