@@ -84,19 +84,21 @@ fun FetchModelsPage(onBack: () -> Unit) {
                     }
                     
                     // Status badge
-                    AssistChip(
-                        onClick = { },
-                        label = { 
-                            Text(
-                                text = "Available",
-                                style = MaterialTheme.typography.labelSmall
-                            ) 
-                        },
-                        colors = AssistChipDefaults.assistChipColors(
-                            containerColor = MaterialTheme.colorScheme.primaryContainer,
-                            labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                    if(model.isDownloaded) {
+                        AssistChip(
+                            onClick = { },
+                            label = {
+                                Text(
+                                    text = "Downloaded",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            },
+                            colors = AssistChipDefaults.assistChipColors(
+                                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         )
-                    )
+                    }
                 }
                 
                 if (model.supports_tool_calling || model.supports_vision) {

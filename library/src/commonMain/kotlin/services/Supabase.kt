@@ -144,14 +144,15 @@ object Supabase {
 
     suspend fun fetchModels(): List<CactusModel> {
         return try {
-            val response = client.get("$SUPABASE_URL/functions/v1/get-models&sdk_name=kotlin&sdk_version=${BuildConfig.FRAMEWORK_VERSION}") {
+            val response = client.get("$SUPABASE_URL/functions/v1/get-models?sdk_name=kotlin&sdk_version=${BuildConfig.FRAMEWORK_VERSION}") {
                 header("Authorization", "Bearer $SUPABASE_KEY")
             }
 
             if (response.status == HttpStatusCode.OK) {
                 response.body<List<CactusModel>>()
+            } else {
+                emptyList()
             }
-            emptyList()
         } catch (e: Exception) {
             println("Error fetching models: $e")
             emptyList()
