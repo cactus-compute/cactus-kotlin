@@ -98,10 +98,12 @@ runBlocking {
     try {
         // Download a model by slug (e.g., "qwen3-0.6", "gemma3-270m")
         // If no model is specified, it defaults to "qwen3-0.6"
-        val downloadSuccess = lm.downloadModel("qwen3-0.6")
+        // Throws exception on failure
+        lm.downloadModel("qwen3-0.6")
         
         // Initialize the model
-        val initSuccess = lm.initializeModel(
+        // Throws exception on failure
+        lm.initializeModel(
             CactusInitParams(
                 model = "qwen3-0.6",
                 contextSize = 2048
@@ -180,8 +182,10 @@ runBlocking {
 ### Function Calling (Experimental)
 ```kotlin
 import com.cactus.models.CactusTool
+import com.cactus.models.CactusFunction
 import com.cactus.models.ToolParametersSchema
 import com.cactus.models.ToolParameter
+import com.cactus.models.createTool
 
 runBlocking {
     val lm = CactusLM()
@@ -265,8 +269,8 @@ val result = lm.generateCompletion(
 ### LLM API Reference
 
 #### CactusLM Class
-- `suspend fun downloadModel(model: String = "qwen3-0.6"): Boolean` - Download an LLM model by slug (e.g., "qwen3-0.6", "gemma3-270m").
-- `suspend fun initializeModel(params: CactusInitParams): Boolean` - Initialize a model for inference.
+- `suspend fun downloadModel(model: String = "qwen3-0.6")` - Download an LLM model by slug (e.g., "qwen3-0.6", "gemma3-270m"). Throws exception on failure.
+- `suspend fun initializeModel(params: CactusInitParams)` - Initialize a model for inference. Throws exception on failure.
 - `suspend fun generateCompletion(messages: List<ChatMessage>, params: CactusCompletionParams = CactusCompletionParams(), onToken: CactusStreamingCallback? = null): CactusCompletionResult?` - Generate text completion. Supports streaming via the `onToken` callback and different inference modes (local, remote, and fallbacks).
 - `suspend fun generateEmbedding(text: String, modelName: String? = null): CactusEmbeddingResult?` - Generate embeddings for the given text.
 - `suspend fun getModels(): List<CactusModel>` - Get a list of available models. Results are cached locally to reduce network requests.
@@ -274,13 +278,21 @@ val result = lm.generateCompletion(
 - `fun isLoaded(): Boolean` - Check if a model is currently loaded.
 
 #### Data Classes
-- `CactusInitParams(model: String?, contextSize: Int?)` - Parameters for model initialization.
-- `CactusCompletionParams(temperature: Double, topK: Int, topP: Double, maxTokens: Int, stopSequences: List<String>, tools: List<CactusTool>, mode: InferenceMode, cactusToken: String?, model: String?)` - Parameters for text completion.
-- `CactusCompletionResult(success: Boolean, response: String?, timeToFirstTokenMs: Double?, totalTimeMs: Double?, tokensPerSecond: Double?, prefillTokens: Int?, decodeTokens: Int?, totalTokens: Int?, toolCalls: List<ToolCall>?)` - The result of a text completion.
-- `CactusEmbeddingResult(success: Boolean, embeddings: List<Double>, dimension: Int?, errorMessage: String?)` - The result of embedding generation.
-- `ChatMessage(content: String, role: String, timestamp: Long?)` - A chat message with role (e.g., "user", "assistant").
-- `CactusModel(slug: String, name: String, download_url: String, size_mb: Int, supports_tool_calling: Boolean, supports_vision: Boolean, isDownloaded: Boolean, quantization: Int)` - Information about an available model.
+- `CactusInitParams(model: String? = null, contextSize: Int? = null)` - Parameters for model initialization.
+- `CactusCompletionParams(model: String? = null, temperature: Double? = null, topK: Int? = null, topP: Double? = null, maxTokens: Int = 200, stopSequences: List<String> = listOf("<|im_end|>", "<end_of_turn>"), tools: List<CactusTool> = emptyList(), mode: InferenceMode = InferenceMode.LOCAL, cactusToken: String? = null)` - Parameters for text completion.
+- `CactusCompletionResult(success: Boolean, response: String? = null, timeToFirstTokenMs: Double? = null, totalTimeMs: Double? = null, tokensPerSecond: Double? = null, prefillTokens: Int? = null, decodeTokens: Int? = null, totalTokens: Int? = null, toolCalls: List<ToolCall>? = emptyList())` - The result of a text completion.
+- `CactusEmbeddingResult(success: Boolean, embeddings: List<Double> = listOf(), dimension: Int? = null, errorMessage: String? = null)` - The result of embedding generation.
+- `ChatMessage(content: String, role: String, timestamp: Long? = null)` - A chat message with role (e.g., "user", "assistant").
+- `CactusModel(created_at: String, slug: String, download_url: String, size_mb: Int, supports_tool_calling: Boolean, supports_vision: Boolean, name: String, isDownloaded: Boolean = false, quantization: Int = 8)` - Information about an available model.
 - `InferenceMode` - Enum for selecting inference mode (`LOCAL`, `REMOTE`, `LOCAL_FIRST`, `REMOTE_FIRST`).
+- `ToolCall(name: String, arguments: Map<String, String>)` - Represents a tool call returned by the model.
+- `CactusTool(type: String = "function", function: CactusFunction)` - Defines a tool that can be called by the model.
+- `CactusFunction(name: String, description: String, parameters: ToolParametersSchema)` - Function definition for a tool.
+- `ToolParametersSchema(type: String = "object", properties: Map<String, ToolParameter>, required: List<String>)` - Schema for tool parameters.
+- `ToolParameter(type: String, description: String, required: Boolean = false)` - A parameter definition for a tool.
+
+#### Helper Functions
+- `createTool(name: String, description: String, parameters: Map<String, ToolParameter>): CactusTool` - Helper function to create a tool with the correct schema.
 
 ## Speech-to-Text (STT)
 
@@ -411,20 +423,21 @@ stt.isModelDownloaded("vosk-en-us")
 
 #### CactusSTT Class
 - `CactusSTT(provider: TranscriptionProvider = TranscriptionProvider.VOSK)` - Constructor to specify the transcription provider.
-- `suspend fun download(model: String): Boolean` - Download an STT model (e.g., "vosk-en-us" or "whisper-tiny-en").
-- `suspend fun init(model: String): Boolean` - Initialize an STT model for transcription.
+- `suspend fun download(model: String = "vosk-en-us"): Boolean` - Download an STT model (e.g., "vosk-en-us" or "whisper-tiny-en"). Defaults to last downloaded model.
+- `suspend fun init(model: String = "vosk-en-us"): Boolean` - Initialize an STT model for transcription. Defaults to last downloaded model.
 - `suspend fun transcribe(params: SpeechRecognitionParams = SpeechRecognitionParams(), filePath: String? = null, mode: TranscriptionMode = TranscriptionMode.LOCAL, apiKey: String? = null): SpeechRecognitionResult?` - Transcribe speech from microphone or file. Supports different transcription modes.
 - `suspend fun warmUpWispr(apiKey: String)` - Warms up the remote Wispr service for lower latency.
 - `fun stop()` - Stop ongoing transcription.
 - `fun isReady(): Boolean` - Check if the STT service is initialized and ready.
-- `suspend fun getVoiceModels(provider: TranscriptionProvider = TranscriptionProvider.VOSK): List<VoiceModel>` - Get a list of available voice models for the configured provider.
-- `suspend fun isModelDownloaded(modelName: String): Boolean` - Check if a specific model has been downloaded.
+- `suspend fun getVoiceModels(provider: TranscriptionProvider = this.provider): List<VoiceModel>` - Get a list of available voice models for the specified provider. Defaults to the instance's provider.
+- `suspend fun isModelDownloaded(modelName: String = "vosk-en-us"): Boolean` - Check if a specific model has been downloaded. Defaults to last downloaded model.
 
 #### Data Classes
 - `TranscriptionProvider` - Enum for selecting the provider (`VOSK`, `WHISPER`).
-- `SpeechRecognitionParams(maxSilenceDuration: Long, maxDuration: Long, sampleRate: Int)` - Parameters for controlling speech recognition.
-- `SpeechRecognitionResult(success: Boolean, text: String?, processingTime: Double?)` - The result of a transcription.
-- `VoiceModel` - Contains information about an available voice model.
+- `SpeechRecognitionParams(maxSilenceDuration: Long = 1000L, maxDuration: Long = 30000L, sampleRate: Int = 16000)` - Parameters for controlling speech recognition.
+- `SpeechRecognitionResult(success: Boolean, text: String? = null, eventSuccess: Boolean = true, processingTime: Double? = null)` - The result of a transcription.
+- `VoiceModel(created_at: String, slug: String, language: String, url: String, size_mb: Int, file_name: String, provider: String = "vosk", isDownloaded: Boolean = false)` - Contains information about an available voice model.
+- `TranscriptionMode` - Enum for transcription mode (`LOCAL`, `REMOTE`, `LOCAL_FIRST`, `REMOTE_FIRST`).
 
 ## Platform-Specific Setup
 
