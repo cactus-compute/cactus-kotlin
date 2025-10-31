@@ -11,6 +11,8 @@ class CactusLM {
     private val openRouterModule = OpenRouterModule()
     private val timeSource = TimeSource.Monotonic
 
+    private val _models = mutableListOf<CactusModel>()
+
     suspend fun downloadModel(
         model: String = _lastInitializedModel
     ) {
@@ -190,7 +192,13 @@ class CactusLM {
     fun isLoaded(): Boolean = _handle != null
 
     suspend fun getModels(): List<CactusModel> {
-        return Supabase.fetchModels()
+        if (_models.isEmpty()) {
+            _models.addAll(Supabase.fetchModels())
+        }
+        for (model in _models) {
+            model.isDownloaded = modelExists(model.slug)
+        }
+        return _models
     }
 
     private suspend fun getValidatedHandle(model: String): Long? {
