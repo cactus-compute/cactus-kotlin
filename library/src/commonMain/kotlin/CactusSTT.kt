@@ -78,17 +78,13 @@ class CactusSTT(
             
             if (Telemetry.isInitialized) {
                 val message = if (isInitialized) null else "Failed to initialize model: $model"
-                Telemetry.instance?.logInit(isInitialized, CactusInitParams(
-                    model = model
-                ), message)
+                Telemetry.instance?.logInit(isInitialized, model, message)
             }
         } catch (e: Exception) {
             println("Error initializing STT: ${e.message}")
             e.printStackTrace()
             if (Telemetry.isInitialized) {
-                Telemetry.instance?.logInit(isInitialized, CactusInitParams(
-                    model = model
-                ), "Error in initializing STT: ${e.message}")
+                Telemetry.instance?.logInit(isInitialized, model, "Error in initializing STT: ${e.message}")
             }
         }
         return isInitialized
@@ -156,7 +152,7 @@ class CactusSTT(
                     success = result?.eventSuccess == true,
                     totalTimeMs = result?.processingTime
                 ),
-                CactusInitParams(model = lastDownloadedModelName),
+                lastDownloadedModelName,
                 message = message,
                 responseTime = startTime.elapsedNow().inWholeMilliseconds.toDouble(),
                 mode = mode
