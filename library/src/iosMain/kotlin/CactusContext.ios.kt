@@ -50,8 +50,9 @@ actual object CactusContext {
         val optionsJson = CactusPayloadBuilder.buildOptionsJson(params)
 
         return@withContext memScoped {
-            val responseBuffer = allocArray<ByteVar>(max(params.maxTokens * quantization, 1024))
-            
+            val bufferSize = max(params.maxTokens * quantization, 2048)
+            val responseBuffer = allocArray<ByteVar>(bufferSize)
+
             // Set up streaming if callback is provided
             val fullResponse = if (onToken != null) {
                 currentStreamingCallback = onToken
@@ -69,7 +70,7 @@ actual object CactusContext {
                 handle.toCPointer(),
                 messagesJson,
                 responseBuffer,
-                max(params.maxTokens * quantization, 1024).convert(),
+                bufferSize.convert(),
                 optionsJson,
                 tools,
                 callback,

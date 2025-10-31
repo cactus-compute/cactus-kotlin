@@ -48,8 +48,9 @@ actual object CactusContext {
     ): CactusCompletionResult = withContext(Dispatchers.Default) {
         val messagesJson = CactusPayloadBuilder.buildMessagesJson(messages)
         val optionsJson = CactusPayloadBuilder.buildOptionsJson(params)
+        val bufferSize = max(params.maxTokens * quantization, 2048)
 
-        val responseBuffer = ByteArray(max(params.maxTokens * quantization, 1024))
+        val responseBuffer = ByteArray(bufferSize)
 
         // Create callback wrapper if onToken is provided
         val callback: ((String, Int) -> Unit)? = if (onToken != null) {
@@ -62,7 +63,7 @@ actual object CactusContext {
             handle,
             messagesJson,
             responseBuffer,
-            max(params.maxTokens * 8, 1024),
+            bufferSize,
             optionsJson,
             tools,
             callback,
