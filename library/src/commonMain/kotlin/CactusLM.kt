@@ -84,7 +84,14 @@ class CactusLM {
 
             try {
                 val toolsJson = params.tools.toToolsJson()
-                CactusContext.completion(currentHandle, messages, params, toolsJson, onToken, quantization)
+                if(params.tools.isNotEmpty()) {
+                    unload()
+                    getValidatedHandle(model)?.let {
+                        CactusContext.completion(it, messages, params, toolsJson, onToken, quantization)
+                    }
+                } else {
+                    CactusContext.completion(currentHandle, messages, params, toolsJson, onToken, quantization)
+                }
             } catch (e: Exception) {
                 if (Telemetry.isInitialized) {
                     Telemetry.instance?.logCompletion(CactusCompletionResult(success = false), _lastInitializedModel, message = e.message)
