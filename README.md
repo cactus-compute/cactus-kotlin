@@ -294,6 +294,132 @@ val result = lm.generateCompletion(
 #### Helper Functions
 - `createTool(name: String, description: String, parameters: Map<String, ToolParameter>): CactusTool` - Helper function to create a tool with the correct schema.
 
+## Tool Filtering
+
+The `ToolFilterService` enables intelligent filtering of tools to optimize function calling by selecting only the most relevant tools for a given user query. This is particularly useful when you have many tools defined and want to reduce token usage and improve model performance.
+
+### How It Works
+
+Tool filtering is automatically enabled in `CactusLM` when tools are provided. The filtering happens before the completion request is sent to the model, analyzing the user's message to determine which tools are most relevant.
+
+### Filter Strategies
+
+Two filtering strategies are available:
+
+#### SIMPLE (Default)
+Fast keyword-based matching with fuzzy scoring. This strategy:
+- Extracts keywords from the user query
+- Matches keywords against tool names and descriptions
+- Scores and ranks tools based on match quality
+- Filters out tools below the similarity threshold
+
+#### SEMANTIC
+More accurate but slower semantic matching using embeddings. This strategy:
+- Generates embeddings for the user query
+- Generates embeddings for each tool's description
+- Calculates cosine similarity between query and tools
+- Falls back to SIMPLE strategy if embedding generation fails
+
+### Configuration
+
+Configure tool filtering when creating a `CactusLM` instance:
+
+```kotlin
+import com.cactus.CactusLM
+import com.cactus.services.ToolFilterConfig
+import com.cactus.services.ToolFilterStrategy
+
+// Enable with default settings (SIMPLE strategy, max 3 tools)
+val lm = CactusLM(
+    enableToolFiltering = true,
+    toolFilterConfig = ToolFilterConfig.simple(maxTools = 3)
+)
+
+// Custom configuration with SIMPLE strategy
+val lm = CactusLM(
+    enableToolFiltering = true,
+    toolFilterConfig = ToolFilterConfig(
+        strategy = ToolFilterStrategy.SIMPLE,
+        maxTools = 5,
+        similarityThreshold = 0.3
+    )
+)
+
+// Use SEMANTIC strategy for more accurate filtering
+val lm = CactusLM(
+    enableToolFiltering = true,
+    toolFilterConfig = ToolFilterConfig(
+        strategy = ToolFilterStrategy.SEMANTIC,
+        maxTools = 3,
+        similarityThreshold = 0.5
+    )
+)
+
+// Disable tool filtering
+val lm = CactusLM(enableToolFiltering = false)
+```
+
+### Configuration Parameters
+
+- `strategy` - The filtering algorithm: `SIMPLE` (default, fast) or `SEMANTIC` (slower but more accurate)
+- `maxTools` - Maximum number of tools to pass to the model (default: null, meaning no limit)
+- `similarityThreshold` - Minimum score required for a tool to be included (default: 0.3)
+
+### Example Usage
+
+```kotlin
+import com.cactus.CactusLM
+import com.cactus.services.ToolFilterConfig
+import com.cactus.services.ToolFilterStrategy
+import com.cactus.models.CactusTool
+
+runBlocking {
+    val lm = CactusLM(
+        enableToolFiltering = true,
+        toolFilterConfig = ToolFilterConfig.simple(maxTools = 3)
+    )
+    
+    lm.initializeModel(CactusInitParams(model = "qwen3-0.6"))
+    
+    // Define many tools
+    val tools = listOf(
+        CactusTool(/* weather tool */),
+        CactusTool(/* calculator tool */),
+        CactusTool(/* search tool */),
+        CactusTool(/* email tool */),
+        CactusTool(/* calendar tool */),
+        // ... more tools
+    )
+    
+    // Tool filtering automatically selects the most relevant tools
+    val result = lm.generateCompletion(
+        messages = listOf(
+            ChatMessage(content = "What's the weather like today?", role = "user")
+        ),
+        params = CactusCompletionParams(
+            tools = tools,  // All tools provided
+            temperature = 0.7f
+        )
+    )
+    
+    // Only the most relevant tools (e.g., weather tool) are sent to the model
+    // Console output will show: "Tool filtering: 10 -> 3 tools"
+}
+```
+
+### Performance Considerations
+
+- **SIMPLE strategy**: Fast, suitable for real-time applications and mobile devices
+- **SEMANTIC strategy**: Requires embedding generation for each tool, slower but more accurate for complex queries
+- **Threshold tuning**: Lower thresholds include more tools, higher thresholds are more selective
+- **Max tools**: Limit the number of tools to reduce token usage and improve model focus
+
+### Fallback Behavior
+
+- If no tools meet the similarity threshold, all tools are returned (up to `maxTools` limit)
+- If SEMANTIC strategy fails (e.g., model not supporting embeddings), it falls back to SIMPLE strategy
+- Tool filtering can be disabled entirely by setting `enableToolFiltering = false`
+
 ## Speech-to-Text (STT)
 
 The `CactusSTT` class provides speech recognition capabilities using on-device models from providers like **Vosk** and **Whisper**.

@@ -1,17 +1,24 @@
 package com.cactus
 
+import com.cactus.models.CactusTool
 import com.cactus.models.toToolsJson
 import com.cactus.services.Supabase
 import com.cactus.services.Telemetry
+import com.cactus.services.ToolFilterConfig
+import com.cactus.services.ToolFilterService
 import kotlin.time.TimeSource
 
-class CactusLM {
+class CactusLM(
+    var enableToolFiltering: Boolean = true,
+    var toolFilterConfig: ToolFilterConfig? = null
+) {
     private var _handle: Long? = null
     private var _lastInitializedModel: String = "qwen3-0.6"
     private val openRouterModule = OpenRouterModule()
     private val timeSource = TimeSource.Monotonic
 
     private val _models = mutableListOf<CactusModel>()
+    private var _toolFilterService: ToolFilterService? = null
 
     suspend fun downloadModel(
         model: String = _lastInitializedModel
@@ -66,8 +73,16 @@ class CactusLM {
         val startTime = timeSource.markNow()
         var result: CactusCompletionResult?
 
+        // Filter tools if enabled
+        val filteredParams = if (enableToolFiltering && params.tools.isNotEmpty()) {
+            val filteredTools = filterTools(messages, params.tools)
+            params.copy(tools = filteredTools)
+        } else {
+            params
+        }
+
         val localCompletion = suspend local@{
-            val model = params.model ?: _lastInitializedModel
+            val model = filteredParams.model ?: _lastInitializedModel
             val currentHandle = getValidatedHandle(model)
             val quantization = Supabase.getModel(model)?.quantization ?: 8
 
@@ -83,14 +98,14 @@ class CactusLM {
             }
 
             try {
-                val toolsJson = params.tools.toToolsJson()
-                if(params.tools.isNotEmpty()) {
+                val toolsJson = filteredParams.tools.toToolsJson()
+                if(filteredParams.tools.isNotEmpty()) {
                     unload()
                     getValidatedHandle(model)?.let {
-                        CactusContext.completion(it, messages, params, toolsJson, onToken, quantization)
+                        CactusContext.completion(it, messages, filteredParams, toolsJson, onToken, quantization)
                     }
                 } else {
-                    CactusContext.completion(currentHandle, messages, params, toolsJson, onToken, quantization)
+                    CactusContext.completion(currentHandle, messages, filteredParams, toolsJson, onToken, quantization)
                 }
             } catch (e: Exception) {
                 if (Telemetry.isInitialized) {
@@ -101,15 +116,15 @@ class CactusLM {
         }
 
         val remoteCompletion = suspend {
-            if (params.cactusToken != null) {
-                openRouterModule.generateCompletion(messages, params, params.cactusToken, onToken)
+            if (filteredParams.cactusToken != null) {
+                openRouterModule.generateCompletion(messages, filteredParams, filteredParams.cactusToken, onToken)
             } else {
                 println("Remote inference requires an apiKey.")
                 null
             }
         }
 
-        result = when (params.mode) {
+        result = when (filteredParams.mode) {
             InferenceMode.LOCAL -> localCompletion()
             InferenceMode.REMOTE -> remoteCompletion()
             InferenceMode.LOCAL_FIRST -> {
@@ -129,11 +144,33 @@ class CactusLM {
                 _lastInitializedModel,
                 message = message,
                 responseTime = startTime.elapsedNow().inWholeMilliseconds.toDouble(),
-                mode = params.mode
+                mode = filteredParams.mode
             )
         }
 
         return result
+    }
+
+    private suspend fun filterTools(messages: List<ChatMessage>, tools: List<CactusTool>): List<CactusTool> {
+        if (_toolFilterService == null) {
+            _toolFilterService = ToolFilterService(
+                config = toolFilterConfig ?: ToolFilterConfig.simple(),
+                lm = this
+            )
+        }
+        
+        val userQuery = messages.lastOrNull { it.role == "user" }?.content 
+            ?: messages.lastOrNull()?.content 
+            ?: ""
+        
+        val filteredTools = _toolFilterService!!.filterTools(userQuery, tools)
+        
+        if (filteredTools.size != tools.size) {
+            println("Tool filtering: ${tools.size} -> ${filteredTools.size} tools")
+            println("Filtered tools: ${filteredTools.joinToString(", ") { it.function.name }}")
+        }
+        
+        return filteredTools
     }
 
     suspend fun generateEmbedding(
