@@ -48,9 +48,8 @@ class CactusLM {
         }
         
         if (Telemetry.isInitialized) {
-            val updatedParams = params.copy(model = modelFolder)
             val message = if (_handle != null) null else "Failed to initialize model at path: $modelPath"
-            Telemetry.instance?.logInit(_handle != null, updatedParams, message)
+            Telemetry.instance?.logInit(_handle != null, modelFolder, message)
         }
         
         if (_handle == null) {
@@ -76,7 +75,7 @@ class CactusLM {
                 if (Telemetry.isInitialized) {
                     Telemetry.instance?.logCompletion(
                         CactusCompletionResult(success = false),
-                        CactusInitParams(model = model),
+                        model,
                         message = "Context not initialized",
                     )
                 }
@@ -88,8 +87,7 @@ class CactusLM {
                 CactusContext.completion(currentHandle, messages, params, toolsJson, onToken, quantization)
             } catch (e: Exception) {
                 if (Telemetry.isInitialized) {
-                    val initParams = CactusInitParams(model = _lastInitializedModel)
-                    Telemetry.instance?.logCompletion(CactusCompletionResult(success = false), initParams, message = e.message)
+                    Telemetry.instance?.logCompletion(CactusCompletionResult(success = false), _lastInitializedModel, message = e.message)
                 }
                 throw e
             }
@@ -118,13 +116,10 @@ class CactusLM {
         }
 
         if (Telemetry.isInitialized) {
-            val initParams = CactusInitParams(
-                model = _lastInitializedModel,
-            )
             val message = if (result?.success == true) null else result?.response
             Telemetry.instance?.logCompletion(
                 result ?: CactusCompletionResult(success = false),
-                initParams,
+                _lastInitializedModel,
                 message = message,
                 responseTime = startTime.elapsedNow().inWholeMilliseconds.toDouble(),
                 mode = params.mode
@@ -157,20 +152,14 @@ class CactusLM {
                     "embeddings_length=${result.embeddings.size}")
 
             if (Telemetry.isInitialized) {
-                val initParams = CactusInitParams(
-                    model = _lastInitializedModel,
-                )
-                Telemetry.instance?.logEmbedding(result, initParams)
+                Telemetry.instance?.logEmbedding(result, _lastInitializedModel)
             }
             
             return result
         } catch (e: Exception) {
             println("CactusLM: Exception during embedding generation: $e")
             if (Telemetry.isInitialized) {
-                val initParams = CactusInitParams(
-                    model = _lastInitializedModel,
-                )
-                Telemetry.instance?.logEmbedding(CactusEmbeddingResult(success = false), initParams, message = e.message)
+                Telemetry.instance?.logEmbedding(CactusEmbeddingResult(success = false), _lastInitializedModel, message = e.message)
             }
             return CactusEmbeddingResult(
                 success = false,

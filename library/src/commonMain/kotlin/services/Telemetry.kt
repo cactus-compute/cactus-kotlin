@@ -53,12 +53,12 @@ class Telemetry private constructor(
         cactusTelemetryToken = token
     }
 
-    suspend fun logInit(success: Boolean, options: CactusInitParams, message: String? = null) {
+    suspend fun logInit(success: Boolean, model: String, message: String? = null) {
         val record = LogRecord(
             eventType = "init",
             projectId = projectId,
             deviceId = deviceId,
-            model = options.model,
+            model = model,
             success = success,
             telemetryToken = cactusTelemetryToken,
             message = message
@@ -69,7 +69,7 @@ class Telemetry private constructor(
 
     suspend fun logCompletion(
         result: CactusCompletionResult?,
-        options: CactusInitParams,
+        model: String,
         message: String? = null,
         responseTime: Double? = null,
         mode: InferenceMode? = null
@@ -81,7 +81,7 @@ class Telemetry private constructor(
             ttft = result?.timeToFirstTokenMs,
             tps = result?.tokensPerSecond,
             responseTime = responseTime,
-            model = options.model,
+            model = model,
             tokens = result?.totalTokens,
             success = result?.success,
             message = message,
@@ -94,7 +94,7 @@ class Telemetry private constructor(
 
     suspend fun logTranscription(
         result: CactusCompletionResult?,
-        options: CactusInitParams,
+        model: String,
         message: String? = null,
         responseTime: Double? = null,
         mode: TranscriptionMode
@@ -104,7 +104,7 @@ class Telemetry private constructor(
             projectId = projectId,
             deviceId = deviceId,
             responseTime = responseTime,
-            model = options.model,
+            model = model,
             success = result?.success,
             telemetryToken = cactusTelemetryToken,
             message = message,
@@ -117,14 +117,14 @@ class Telemetry private constructor(
 
     suspend fun logEmbedding(
         result: CactusEmbeddingResult?,
-        options: CactusInitParams,
+        model: String,
         message: String? = null,
     ) {
         val record = LogRecord(
             eventType = "embedding",
             projectId = projectId,
             deviceId = deviceId,
-            model = options.model,
+            model = model,
             success = result?.success,
             message = message,
             telemetryToken = cactusTelemetryToken
