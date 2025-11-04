@@ -14,7 +14,7 @@ plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinSerialization)
     id("co.touchlab.kmmbridge") version "1.2.1"
-    `maven-publish`
+    alias(libs.plugins.vanniktech.mavenPublish)
 }
 
 group = "com.cactus"
@@ -232,4 +232,42 @@ publishing {
             }
         }
     }
+}
+
+mavenPublishing {
+    coordinates(
+        groupId = "com.cactuscompute",
+        artifactId = "cactus",
+        version = version.toString()
+    )
+
+    pom {
+        name.set("Cactus")
+        description.set("Run AI locally in your apps")
+        url.set("https://github.com/cactus-compute/cactus/")
+
+        licenses {
+            license {
+                name.set("The Apache License, Version 2.0")
+                url.set("http://www.apache.org/licenses/LICENSE-2.0.txt")
+            }
+        }
+
+        developers {
+            developer {
+                id.set("cactus-compute")
+                name.set("Cactus Compute")
+                email.set("founders@cactuscompute.com")
+            }
+        }
+
+        scm {
+            url.set("https://github.com/cactus-compute/cactus/")
+            connection.set("scm:git:git://github.com/cactus-compute/cactus.git")
+            developerConnection.set("scm:git:ssh://git@github.com/cactus-compute/cactus.git")
+        }
+    }
+
+    publishToMavenCentral(com.vanniktech.maven.publish.SonatypeHost.CENTRAL_PORTAL)
+    signAllPublications()
 }
