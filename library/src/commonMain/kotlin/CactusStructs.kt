@@ -12,7 +12,7 @@ data class CactusCompletionParams(
     val temperature: Double? = null,
     val topK: Int? = null,
     val topP: Double? = null,
-    val maxTokens: Int = 200,
+    val maxTokens: Int = 512,
     val stopSequences: List<String> = listOf("<|im_end|>", "<end_of_turn>"),
     val tools: List<CactusTool> = emptyList(),
     val mode: InferenceMode = InferenceMode.LOCAL,
