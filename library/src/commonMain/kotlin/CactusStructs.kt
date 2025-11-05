@@ -71,7 +71,7 @@ data class VoiceModel(
     val url: String,
     val size_mb: Int,
     val file_name: String,
-    val provider: String = "vosk",
+    val provider: String = "whisper",
     var isDownloaded: Boolean = false
 )
 
@@ -118,7 +118,7 @@ enum class TranscriptionMode {
 }
 
 enum class TranscriptionProvider {
-    VOSK, WHISPER
+    WHISPER
 }
 
 enum class InferenceMode {

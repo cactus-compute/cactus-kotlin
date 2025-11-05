@@ -47,7 +47,7 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
             implementation(compose.materialIconsExtended)
-            implementation("com.cactus:library:1.0.0-beta")
+            implementation("com.cactuscompute:cactus:1.0.0-beta")
             implementation(libs.ktor.client.core)
         }
     }

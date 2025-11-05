@@ -49,7 +49,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
         const val WHISPER_SAMPLING_BEAM_SEARCH = 1
     }
 
-    override suspend fun initialize(modelFolder: String, spkModelFolder: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun initialize(modelFolder: String): Boolean = withContext(Dispatchers.IO) {
         return@withContext try {
             val baseDir = File(applicationContext.filesDir, "models")
             val modelDir = File(baseDir, modelFolder)
@@ -417,7 +417,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
         return try {
             val file = RandomAccessFile(filePath, "r")
             file.use {
-                // Skip WAV header (44 bytes) - same approach as Vosk
+                // Skip WAV header (44 bytes)
                 file.skipBytes(44)
                 
                 // Read remaining audio data

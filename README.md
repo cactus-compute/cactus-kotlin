@@ -422,41 +422,23 @@ runBlocking {
 
 ## Speech-to-Text (STT)
 
-The `CactusSTT` class provides speech recognition capabilities using on-device models from providers like **Vosk** and **Whisper**.
-
-### Choosing a Transcription Provider
-
-You can select a transcription provider when initializing `CactusSTT`. The available providers are:
-- `TranscriptionProvider.VOSK` (Default): Uses Vosk for transcription.
-- `TranscriptionProvider.WHISPER`: Uses Whisper for transcription.
-
-```kotlin
-import com.cactus.CactusSTT
-import com.cactus.TranscriptionProvider
-
-// Initialize with the VOSK provider (default)
-val sttVosk = CactusSTT() 
-
-// Or explicitly initialize with the WHISPER provider
-val sttWhisper = CactusSTT(TranscriptionProvider.WHISPER)
-```
+The `CactusSTT` class provides speech recognition capabilities using on-device models from **Whisper**.
 
 ### Basic Usage
 
-#### With Vosk
 ```kotlin
 import com.cactus.CactusSTT
 import com.cactus.SpeechRecognitionParams
 import kotlinx.coroutines.runBlocking
 
 runBlocking {
-    val stt = CactusSTT() // Defaults to VOSK provider
+    val stt = CactusSTT()
 
-    // Download STT model (e.g., vosk-en-us)
-    val downloadSuccess = stt.download("vosk-en-us")
+    // Download a Whisper model (e.g., whisper-tiny)
+    val downloadSuccess = stt.download("whisper-tiny")
     
     // Initialize the model
-    val initSuccess = stt.init("vosk-en-us")
+    val initSuccess = stt.init("whisper-tiny")
 
     // Transcribe from microphone
     val result = stt.transcribe(
@@ -479,15 +461,14 @@ runBlocking {
 }
 ```
 
-#### With Whisper
+#### Transcribing from an Audio File
 ```kotlin
 import com.cactus.CactusSTT
 import com.cactus.SpeechRecognitionParams
-import com.cactus.TranscriptionProvider
 import kotlinx.coroutines.runBlocking
 
 runBlocking {
-    val stt = CactusSTT(TranscriptionProvider.WHISPER)
+    val stt = CactusSTT()
 
     // Download a Whisper model (e.g., whisper-tiny)
     val downloadSuccess = stt.download("whisper-tiny")
@@ -533,36 +514,32 @@ val fileResult = stt.transcribe(
 ```
 
 ### Available Voice Models
-You can get a list of available models for the configured provider.
+You can get a list of available Whisper models.
 ```kotlin
-// For VOSK (default)
-val voskModels = CactusSTT().getVoiceModels()
-
-// For WHISPER
-val whisperModels = CactusSTT().getVoiceModels(TranscriptionProvider.WHISPER)
+val whisperModels = CactusSTT().getVoiceModels()
 
 // Check if a model is downloaded
-stt.isModelDownloaded("vosk-en-us")
+stt.isModelDownloaded("whisper-tiny")
 ```
 
 ### STT API Reference
 
 #### CactusSTT Class
-- `CactusSTT(provider: TranscriptionProvider = TranscriptionProvider.VOSK)` - Constructor to specify the transcription provider.
-- `suspend fun download(model: String = "vosk-en-us"): Boolean` - Download an STT model (e.g., "vosk-en-us" or "whisper-tiny-en"). Defaults to last downloaded model.
-- `suspend fun init(model: String = "vosk-en-us"): Boolean` - Initialize an STT model for transcription. Defaults to last downloaded model.
+- `CactusSTT(provider: TranscriptionProvider = TranscriptionProvider.WHISPER)` - Constructor to specify the transcription provider.
+- `suspend fun download(model: String = "whisper-tiny"): Boolean` - Download an STT model (e.g., "whisper-tiny" or "whisper-base"). Defaults to last downloaded model.
+- `suspend fun init(model: String = "whisper-tiny"): Boolean` - Initialize an STT model for transcription. Defaults to last downloaded model.
 - `suspend fun transcribe(params: SpeechRecognitionParams = SpeechRecognitionParams(), filePath: String? = null, mode: TranscriptionMode = TranscriptionMode.LOCAL, apiKey: String? = null): SpeechRecognitionResult?` - Transcribe speech from microphone or file. Supports different transcription modes.
 - `suspend fun warmUpWispr(apiKey: String)` - Warms up the remote Wispr service for lower latency.
 - `fun stop()` - Stop ongoing transcription.
 - `fun isReady(): Boolean` - Check if the STT service is initialized and ready.
 - `suspend fun getVoiceModels(provider: TranscriptionProvider = this.provider): List<VoiceModel>` - Get a list of available voice models for the specified provider. Defaults to the instance's provider.
-- `suspend fun isModelDownloaded(modelName: String = "vosk-en-us"): Boolean` - Check if a specific model has been downloaded. Defaults to last downloaded model.
+- `suspend fun isModelDownloaded(modelName: String = "whisper-tiny"): Boolean` - Check if a specific model has been downloaded. Defaults to last downloaded model.
 
 #### Data Classes
-- `TranscriptionProvider` - Enum for selecting the provider (`VOSK`, `WHISPER`).
+- `TranscriptionProvider` - Enum for selecting the provider (`WHISPER`).
 - `SpeechRecognitionParams(maxSilenceDuration: Long = 1000L, maxDuration: Long = 30000L, sampleRate: Int = 16000)` - Parameters for controlling speech recognition.
 - `SpeechRecognitionResult(success: Boolean, text: String? = null, eventSuccess: Boolean = true, processingTime: Double? = null)` - The result of a transcription.
-- `VoiceModel(created_at: String, slug: String, language: String, url: String, size_mb: Int, file_name: String, provider: String = "vosk", isDownloaded: Boolean = false)` - Contains information about an available voice model.
+- `VoiceModel(created_at: String, slug: String, language: String, url: String, size_mb: Int, file_name: String, provider: String = "whisper", isDownloaded: Boolean = false)` - Contains information about an available voice model.
 - `TranscriptionMode` - Enum for transcription mode (`LOCAL`, `REMOTE`, `LOCAL_FIRST`, `REMOTE_FIRST`).
 
 ## Platform-Specific Setup
@@ -593,8 +570,8 @@ Check out the example app in the `example/` directory for a complete Kotlin Mult
 - Model discovery and fetching available models
 - Model downloading with progress tracking
 - Text completion with both regular and streaming modes
-- Speech-to-text transcription with multiple provider support (Vosk and Whisper)
-- Voice model management and provider switching
+- Speech-to-text transcription with Whisper
+- Voice model management
 - Embedding generation
 - Function calling capabilities
 - Error handling and status management

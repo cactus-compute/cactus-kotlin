@@ -75,17 +75,11 @@ fun TranscriptionPage(onBack: () -> Unit) {
                     outputText = "No models available."
                 }
             } catch (e: Exception) {
-                val defaultSlug = if (currentProvider == TranscriptionProvider.VOSK) {
-                    "vosk-en-us"
-                } else {
-                    "whisper-tiny"
-                }
-                
                 voiceModels = emptyList()
-                selectedModel = defaultSlug
+                selectedModel = "whisper-tiny"
                 isLoadingModels = false
                 isUsingDefaultModel = true
-                outputText = "Network error loading models. Using default model: $defaultSlug"
+                outputText = "Network error loading models. Using default model"
             }
         }
     }
@@ -308,7 +302,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
                         OutlinedTextField(
                             value = when (currentProvider) {
                                 TranscriptionProvider.WHISPER -> "Whisper"
-                                TranscriptionProvider.VOSK -> "Vosk"
                             },
                             onValueChange = {},
                             readOnly = true,
@@ -328,19 +321,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
                                 onClick = {
                                     if (currentProvider != TranscriptionProvider.WHISPER) {
                                         currentProvider = TranscriptionProvider.WHISPER
-                                        resetState()
-                                        stt.stop()
-                                        stt = CactusSTT(currentProvider)
-                                        loadVoiceModels()
-                                    }
-                                    providerExpanded = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Vosk") },
-                                onClick = {
-                                    if (currentProvider != TranscriptionProvider.VOSK) {
-                                        currentProvider = TranscriptionProvider.VOSK
                                         resetState()
                                         stt.stop()
                                         stt = CactusSTT(currentProvider)
