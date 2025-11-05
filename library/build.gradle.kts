@@ -98,25 +98,6 @@ kotlin {
                     extraOpts("-libraryPath", libraryPath.absolutePath)
                 }
 
-                val vosk by creating {
-                    defFile(project.file("src/iosMain/cinterop/vosk.def"))
-                    packageName("com.vosk.native")
-
-                    val archPath = when (iosTarget.name) {
-                        "iosArm64" -> "ios-arm64"
-                        "iosX64" -> "ios-arm64-simulator"
-                        "iosSimulatorArm64" -> "ios-arm64-simulator"
-                        else -> "ios-arm64"
-                    }
-
-                    val headerPath = project.file("src/commonMain/resources/ios/include")
-                    val libraryPath = project.file("src/commonMain/resources/ios/lib/$archPath")
-                    
-                    includeDirs(headerPath)
-                    compilerOpts("-L${libraryPath.absolutePath}", "-lvosk")
-                    extraOpts("-libraryPath", libraryPath.absolutePath)
-                }
-
                 val whisper by creating {
                     defFile(project.file("src/iosMain/cinterop/whisper.def"))
                     packageName("com.whisper.native")
@@ -160,7 +141,6 @@ kotlin {
                 implementation("androidx.core:core-ktx:1.12.0")
                 implementation("androidx.activity:activity-compose:1.8.2")
                 implementation("io.ktor:ktor-client-okhttp:3.1.3")
-                implementation("com.alphacephei:vosk-android:0.3.70")
                 implementation("net.java.dev.jna:jna:5.13.0@aar")
             }
         }

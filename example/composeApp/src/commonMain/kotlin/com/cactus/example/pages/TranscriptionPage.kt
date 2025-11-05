@@ -75,17 +75,11 @@ fun TranscriptionPage(onBack: () -> Unit) {
                     outputText = "No models available."
                 }
             } catch (e: Exception) {
-                val defaultSlug = if (currentProvider == TranscriptionProvider.VOSK) {
-                    "vosk-en-us"
-                } else {
-                    "whisper-tiny"
-                }
-                
                 voiceModels = emptyList()
-                selectedModel = defaultSlug
+                selectedModel = "whisper-tiny"
                 isLoadingModels = false
                 isUsingDefaultModel = true
-                outputText = "Network error loading models. Using default model: $defaultSlug"
+                outputText = "Network error loading models. Using default model"
             }
         }
     }
@@ -184,7 +178,8 @@ fun TranscriptionPage(onBack: () -> Unit) {
                         outputText = "Transcribing audio file: ${selectedPath.substringAfterLast('/')}"
                         
                         val params = SpeechRecognitionParams(
-                            sampleRate = 16000
+                            sampleRate = 16000,
+                            model = selectedModel
                         )
                         
                         val result = withContext(Dispatchers.Default) {
@@ -217,11 +212,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
     }
 
     fun transcribeFromFile() {
-        if (!isModelLoaded) {
-            outputText = "Please initialize the model first."
-            return
-        }
-        
         scope.launch {
             isPreparingFile = true
             filePickerLauncher.launch()
@@ -308,7 +298,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
                         OutlinedTextField(
                             value = when (currentProvider) {
                                 TranscriptionProvider.WHISPER -> "Whisper"
-                                TranscriptionProvider.VOSK -> "Vosk"
                             },
                             onValueChange = {},
                             readOnly = true,
@@ -328,19 +317,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
                                 onClick = {
                                     if (currentProvider != TranscriptionProvider.WHISPER) {
                                         currentProvider = TranscriptionProvider.WHISPER
-                                        resetState()
-                                        stt.stop()
-                                        stt = CactusSTT(currentProvider)
-                                        loadVoiceModels()
-                                    }
-                                    providerExpanded = false
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Vosk") },
-                                onClick = {
-                                    if (currentProvider != TranscriptionProvider.VOSK) {
-                                        currentProvider = TranscriptionProvider.VOSK
                                         resetState()
                                         stt.stop()
                                         stt = CactusSTT(currentProvider)
@@ -506,7 +482,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
                 
                 Button(
                     onClick = { transcribeFromFile() },
-                    enabled = !isInitializing && !isTranscribing && !isPreparingFile && isModelLoaded && !isLoadingModels,
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("File")

@@ -27,7 +27,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
     private var stopCurrentRecognition: (() -> Unit)? = null
 
     @OptIn(ExperimentalForeignApi::class)
-    override suspend fun initialize(modelFolder: String, spkModelFolder: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun initialize(modelFolder: String): Boolean = withContext(Dispatchers.IO) {
         return@withContext try {
             val baseDir = IOSFileUtils.getModelsDirectory() ?: return@withContext false
             val modelDir = "$baseDir/$modelFolder"

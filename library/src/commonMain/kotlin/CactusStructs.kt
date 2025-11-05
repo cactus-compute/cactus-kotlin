@@ -71,7 +71,7 @@ data class VoiceModel(
     val url: String,
     val size_mb: Int,
     val file_name: String,
-    val provider: String = "vosk",
+    val provider: String = "whisper",
     var isDownloaded: Boolean = false
 )
 
@@ -79,6 +79,7 @@ data class SpeechRecognitionParams(
     val maxSilenceDuration: Long = 1000L,
     val maxDuration: Long = 30000L,
     val sampleRate: Int = 16000,
+    val model: String? = null
 )
 
 data class SpeechRecognitionResult(
@@ -118,7 +119,7 @@ enum class TranscriptionMode {
 }
 
 enum class TranscriptionProvider {
-    VOSK, WHISPER
+    WHISPER
 }
 
 enum class InferenceMode {

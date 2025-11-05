@@ -8,7 +8,6 @@ private val applicationContext: Context by lazy {
 
 actual fun getSpeechRecognitionProvider(provider: TranscriptionProvider): SpeechRecognitionProvider {
     return when (provider) {
-        TranscriptionProvider.VOSK -> VoskSpeechRecognitionProvider()
         TranscriptionProvider.WHISPER -> WhisperSpeechRecognitionProvider()
     }
 }

@@ -5,30 +5,22 @@ import com.cactus.services.Telemetry
 import kotlin.time.TimeSource
 
 class CactusSTT(
-    private val provider: TranscriptionProvider = TranscriptionProvider.VOSK
+    private val provider: TranscriptionProvider = TranscriptionProvider.WHISPER
 ) {
     private var isInitialized = false
-    private var lastDownloadedModelName: String = "vosk-en-us"
+    private var _lastInitializedModel: String = "whisper-tiny"
     private val timeSource = TimeSource.Monotonic
     private val wisprFlow = WisprFlow()
     private lateinit var speechProvider: SpeechRecognitionProvider
 
-
-    // spk model is universal, no need to change it for different languages
-    private val spkModelFolder: String = "vosk-model-spk-0.4"
-    private val spkModelUrl: String = "https://alphacephei.com/vosk/models/vosk-model-spk-0.4.zip"
-
     private var voiceModels = mutableMapOf<TranscriptionProvider, List<VoiceModel>>()
 
     suspend fun download(
-        model: String = lastDownloadedModelName
+        model: String
     ): Boolean {
-        if (modelExists(model) && modelExists(spkModelFolder)) {
+        val currentModel  = getModel(model) ?: return false
+        if (isModelDownloaded(model)) {
             return true
-        }
-        val currentModel  = getModel(model) ?: run {
-            println("No data found for model: $model")
-            return false
         }
         val tasks = mutableListOf<DownloadTask>()
 
@@ -44,49 +36,31 @@ class CactusSTT(
                     folder = currentModel.slug,
                     requiresExtraction = false
                 ))
-            } else {
-                // VOSK models are .zip files, need extraction
-                tasks.add(DownloadTask(
-                    url = currentModel.url,
-                    filename = "${currentModel.slug}.zip",
-                    folder = currentModel.slug,
-                    requiresExtraction = true
-                ))
             }
         }
-        if(!isWhisper && !modelExists(spkModelFolder)) {
-            tasks.add(DownloadTask(
-                url = spkModelUrl,
-                filename = "$spkModelFolder.zip",
-                folder = spkModelFolder,
-                requiresExtraction = true
-            ))
-        }
-        val success = downloadAndExtractModels(tasks)
-        if (success) {
-            lastDownloadedModelName = model
-        }
-        return success
+        return downloadAndExtractModels(tasks)
     }
 
-    suspend fun init(model: String = lastDownloadedModelName): Boolean {
+    suspend fun init(model: String): Boolean {
         isInitialized = false
+        if (!isModelDownloaded(model)) {
+            download(model)
+        }
         try {
             // Initialize the speech provider based on the selected provider
             speechProvider = getSpeechRecognitionProvider(provider)
-            isInitialized = speechProvider.initialize(model, spkModelFolder)
+            isInitialized = speechProvider.initialize(model)
             
             if (Telemetry.isInitialized) {
                 val message = if (isInitialized) null else "Failed to initialize model: $model"
                 Telemetry.instance?.logInit(isInitialized, model, message)
             }
         } catch (e: Exception) {
-            println("Error initializing STT: ${e.message}")
-            e.printStackTrace()
             if (Telemetry.isInitialized) {
                 Telemetry.instance?.logInit(isInitialized, model, "Error in initializing STT: ${e.message}")
             }
         }
+        _lastInitializedModel = model
         return isInitialized
     }
 
@@ -98,13 +72,19 @@ class CactusSTT(
     ): SpeechRecognitionResult? {
         val startTime = timeSource.markNow()
         var result: SpeechRecognitionResult?
+        val model = params.model ?: _lastInitializedModel
 
         val localTranscribe = suspend {
+            if (!isInitialized || model!= _lastInitializedModel) {
+                init(model)
+            }
             if (isInitialized) {
                 speechProvider.performRecognition(params, filePath)
             } else {
-                println("Local STT not initialized.")
-                null
+                SpeechRecognitionResult(
+                    success = false,
+                    text = "Local STT not initialized."
+                )
             }
         }
 
@@ -112,8 +92,10 @@ class CactusSTT(
             if (filePath != null && apiKey != null) {
                 wisprFlow.transcribe(filePath, apiKey)
             } else {
-                println("Remote transcription requires filePath and apiKey.")
-                null
+                SpeechRecognitionResult(
+                    success = false,
+                    text = "Remote transcription requires filePath and apiKey."
+                )
             }
         }
 
@@ -127,15 +109,27 @@ class CactusSTT(
             TranscriptionMode.LOCAL_FIRST -> {
                 result = localTranscribe()
                 if (result?.success != true) {
-                    println("Local transcription failed or unavailable, trying remote.")
+                    val localError = result?.text
                     result = remoteTranscribe()
+                    if (result?.success != true && localError != null) {
+                        result = SpeechRecognitionResult(
+                            success = false,
+                            text = "Local transcription failed: $localError. Remote transcription also failed: ${result?.text}"
+                        )
+                    }
                 }
             }
             TranscriptionMode.REMOTE_FIRST -> {
                 result = remoteTranscribe()
                 if (result?.success != true) {
-                    println("Remote transcription failed or unavailable, trying local.")
+                    val remoteError = result?.text
                     result = localTranscribe()
+                    if (result?.success != true && remoteError != null) {
+                        result = SpeechRecognitionResult(
+                            success = false,
+                            text = "Remote transcription failed: $remoteError. Local transcription also failed: ${result?.text}"
+                        )
+                    }
                 }
             }
         }
@@ -152,7 +146,7 @@ class CactusSTT(
                     success = result?.eventSuccess == true,
                     totalTimeMs = result?.processingTime
                 ),
-                lastDownloadedModelName,
+                _lastInitializedModel,
                 message = message,
                 responseTime = startTime.elapsedNow().inWholeMilliseconds.toDouble(),
                 mode = mode
@@ -177,7 +171,6 @@ class CactusSTT(
     suspend fun getVoiceModels(provider: TranscriptionProvider = this.provider): List<VoiceModel> {
         return voiceModels[provider] ?: run {
             val providerName = when (provider) {
-                TranscriptionProvider.VOSK -> "vosk"
                 TranscriptionProvider.WHISPER -> "whisper"
             }
             val newModels = Supabase.fetchVoiceModels(providerName)
@@ -190,19 +183,10 @@ class CactusSTT(
     }
 
     suspend fun isModelDownloaded(
-        modelName: String = lastDownloadedModelName
+        modelName: String = _lastInitializedModel
     ): Boolean {
-        val currentModel = getModel(modelName) ?: run {
-            println("No data found for model: $lastDownloadedModelName")
-            return false
-        }
-        if (!modelExists(currentModel.slug)) {
-            return false
-        }
-        if (currentModel.provider == "vosk") {
-            return modelExists(spkModelFolder)
-        }
-        return true
+        val currentModel = getModel(modelName) ?: return false
+        return modelExists(currentModel.slug)
     }
 
     private suspend fun getModel(slug: String): VoiceModel? {
