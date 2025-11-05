@@ -537,7 +537,7 @@ stt.isModelDownloaded("whisper-tiny")
 
 #### Data Classes
 - `TranscriptionProvider` - Enum for selecting the provider (`WHISPER`).
-- `SpeechRecognitionParams(maxSilenceDuration: Long = 1000L, maxDuration: Long = 30000L, sampleRate: Int = 16000)` - Parameters for controlling speech recognition.
+- `SpeechRecognitionParams(maxSilenceDuration: Long = 1000L, maxDuration: Long = 30000L, sampleRate: Int = 16000, model: String?)` - Parameters for controlling speech recognition.
 - `SpeechRecognitionResult(success: Boolean, text: String? = null, eventSuccess: Boolean = true, processingTime: Double? = null)` - The result of a transcription.
 - `VoiceModel(created_at: String, slug: String, language: String, url: String, size_mb: Int, file_name: String, provider: String = "whisper", isDownloaded: Boolean = false)` - Contains information about an available voice model.
 - `TranscriptionMode` - Enum for transcription mode (`LOCAL`, `REMOTE`, `LOCAL_FIRST`, `REMOTE_FIRST`).

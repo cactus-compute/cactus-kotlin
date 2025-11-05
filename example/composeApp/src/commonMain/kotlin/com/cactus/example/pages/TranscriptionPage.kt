@@ -178,7 +178,8 @@ fun TranscriptionPage(onBack: () -> Unit) {
                         outputText = "Transcribing audio file: ${selectedPath.substringAfterLast('/')}"
                         
                         val params = SpeechRecognitionParams(
-                            sampleRate = 16000
+                            sampleRate = 16000,
+                            model = selectedModel
                         )
                         
                         val result = withContext(Dispatchers.Default) {
@@ -211,11 +212,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
     }
 
     fun transcribeFromFile() {
-        if (!isModelLoaded) {
-            outputText = "Please initialize the model first."
-            return
-        }
-        
         scope.launch {
             isPreparingFile = true
             filePickerLauncher.launch()
@@ -486,7 +482,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
                 
                 Button(
                     onClick = { transcribeFromFile() },
-                    enabled = !isInitializing && !isTranscribing && !isPreparingFile && isModelLoaded && !isLoadingModels,
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("File")

@@ -79,6 +79,7 @@ data class SpeechRecognitionParams(
     val maxSilenceDuration: Long = 1000L,
     val maxDuration: Long = 30000L,
     val sampleRate: Int = 16000,
+    val model: String? = null
 )
 
 data class SpeechRecognitionResult(
