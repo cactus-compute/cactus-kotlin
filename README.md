@@ -13,41 +13,25 @@ Official Kotlin Multiplatform library for Cactus, a framework for deploying LLM 
 ```kotlin
 dependencyResolutionManagement {
     repositories {
-        maven {
-            name = "GitHubPackagesCactus"
-            url = uri("https://maven.pkg.github.com/cactus-compute/cactus-kotlin")
-            credentials {
-                username = properties.getProperty("github.username") ?: System.getenv("GITHUB_ACTOR")
-                password = properties.getProperty("github.token") ?: System.getenv("GITHUB_TOKEN")
-            }
-        }
+        mavenCentral()
     }
 }
 ```
-### 2. Add credentials
-Add your GitHub username and token to `local.properties`:
-```
-github.username=your-username
-github.token=your-personal-access-token
-```
-You can generate a personal access token by following the instructions on [GitHub's documentation](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). The token needs `read:packages` scope.
 
-Or set them as environment variables: `GITHUB_ACTOR` and `GITHUB_TOKEN`.
-
-### 3. Add to your KMP project's `build.gradle.kts`:
+### 2. Add to your KMP project's `build.gradle.kts`:
 ```kotlin
 kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation("com.cactus:library:1.0.0-beta")
+                implementation("com.cactuscompute:cactus:1.0.1-beta")
             }
         }
     }
 }
 ```
 
-### 4. Add the permissions to your manifest (Android)
+### 3. Add the permissions to your manifest (Android)
 ```xml
 <uses-permission android:name="android.permission.INTERNET" /> // for model downloads
 <uses-permission android:name="android.permission.RECORD_AUDIO" /> // for transcription
