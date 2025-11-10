@@ -134,7 +134,7 @@ kotlin {
                 implementation("io.ktor:ktor-client-content-negotiation:3.1.3")
                 implementation("io.ktor:ktor-serialization-kotlinx-json:3.1.3")
                 implementation("com.squareup.okio:okio:3.9.0")
-                implementation("co.touchlab:kermit:2.0.3")
+                implementation("co.touchlab:kermit:2.0.8")
             }
         }
         val androidMain by getting {
