@@ -5,6 +5,7 @@ import android.content.SharedPreferences
 import com.cactus.CactusContextInitializer
 import com.cactus.models.BufferedLogRecord
 import com.cactus.models.LogRecord
+import utils.CactusLogger
 import androidx.core.content.edit
 import kotlinx.serialization.json.Json
 
@@ -27,17 +28,17 @@ actual object LogBuffer {
 
             Json.decodeFromString<List<BufferedLogRecord>>(jsonString)
         } catch (e: Exception) {
-            println("Error loading failed log records: $e")
+            CactusLogger.e("Error loading failed log records: ${e.message}", tag = "LogBuffer", throwable = e)
             emptyList()
         }
     }
-    
+
     actual suspend fun clearFailedLogRecords() {
         try {
             val prefs = getSharedPreferences()
             prefs.edit { remove(FAILED_LOG_RECORDS_KEY) }
         } catch (e: Exception) {
-            println("Error clearing failed log records: $e")
+            CactusLogger.e("Error clearing failed log records: ${e.message}", tag = "LogBuffer", throwable = e)
         }
     }
 
@@ -67,7 +68,7 @@ actual object LogBuffer {
             if (bufferedRecord.retryCount > MAX_RETRIES) {
                 failedRecords.removeAt(existingIndex)
             } else {
-                println("Retry ${bufferedRecord.retryCount}/${MAX_RETRIES} for buffered log record")
+                CactusLogger.d("Retry ${bufferedRecord.retryCount}/${MAX_RETRIES} for buffered log record", tag = "LogBuffer")
             }
             saveFailedLogRecords(failedRecords)
         }
@@ -79,7 +80,7 @@ actual object LogBuffer {
             val jsonString = Json.encodeToString(records)
             prefs.edit { putString(FAILED_LOG_RECORDS_KEY, jsonString) }
         } catch (e: Exception) {
-            println("Error saving failed log records: $e")
+            CactusLogger.e("Error saving failed log records: ${e.message}", tag = "LogBuffer", throwable = e)
         }
     }
 }

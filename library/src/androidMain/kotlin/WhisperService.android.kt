@@ -8,6 +8,7 @@ import android.media.AudioRecord
 import android.media.MediaRecorder
 import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat
+import utils.CactusLogger
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -54,40 +55,39 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             val baseDir = File(applicationContext.filesDir, "models")
             val modelDir = File(baseDir, modelFolder)
 
-            println("Initializing Whisper with modelDir: ${modelDir.absolutePath}")
+            CactusLogger.i("Initializing Whisper with modelDir: ${modelDir.absolutePath}", tag = "WhisperService")
 
             if (!modelDir.exists() || !modelDir.isDirectory) {
-                println("ERROR: Whisper model directory not found at ${modelDir.absolutePath}")
+                CactusLogger.e("Whisper model directory not found at ${modelDir.absolutePath}", tag = "WhisperService")
                 return@withContext false
             }
 
             // Look for the model file (typically ggml-*.bin)
             val modelFile = modelDir.listFiles()?.firstOrNull { it.name.endsWith(".bin") }
             if (modelFile == null || !modelFile.exists()) {
-                println("ERROR: Whisper model file not found in $modelDir")
-                println("Available files: ${modelDir.listFiles()?.joinToString { it.name }}")
+                CactusLogger.e("Whisper model file not found in $modelDir", tag = "WhisperService")
+                CactusLogger.d("Available files: ${modelDir.listFiles()?.joinToString { it.name }}", tag = "WhisperService")
                 return@withContext false
             }
 
             val modelPath = modelFile.absolutePath
-            println("Loading Whisper model from: $modelPath")
+            CactusLogger.i("Loading Whisper model from: $modelPath", tag = "WhisperService")
 
             // Initialize Whisper context
             whisperContext = whisperInitFromFile(modelPath)
 
             if (whisperContext != 0L) {
-                println("Whisper model loaded successfully")
+                CactusLogger.i("Whisper model loaded successfully", tag = "WhisperService")
                 isModelReady = true
-                println("Whisper speech recognition initialized successfully")
+                CactusLogger.i("Whisper speech recognition initialized successfully", tag = "WhisperService")
             } else {
-                println("Failed to load Whisper model")
+                CactusLogger.e("Failed to load Whisper model", tag = "WhisperService")
                 isModelReady = false
             }
 
             isModelReady
         } catch (e: Exception) {
-            println("Failed to initialize Whisper speech recognition: $e")
-            e.printStackTrace()
+            CactusLogger.e("Failed to initialize Whisper speech recognition: ${e.message}", tag = "WhisperService", throwable = e)
             false
         }
     }
@@ -103,7 +103,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
     override suspend fun performRecognition(params: SpeechRecognitionParams, filePath: String?): SpeechRecognitionResult? =
         suspendCancellableCoroutine { continuation ->
             if (!isModelReady || whisperContext == 0L) {
-                println("Whisper model not ready")
+                CactusLogger.w("Whisper model not ready", tag = "WhisperService")
                 if (continuation.isActive) {
                     continuation.resume(SpeechRecognitionResult(
                         success = false,
@@ -192,8 +192,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
                 whisperFreeParams(paramsPtr)
             }
         } catch (e: Exception) {
-            println("Error processing audio file: $e")
-            e.printStackTrace()
+            CactusLogger.e("Error processing audio file: ${e.message}", tag = "WhisperService", throwable = e)
             continuation.resume(SpeechRecognitionResult(
                 success = false,
                 text = "Error processing audio file: ${e.message}"
@@ -207,7 +206,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
         continuation: CancellableContinuation<SpeechRecognitionResult?>
     ) {
         if (isListening) {
-            println("Already listening")
+            CactusLogger.w("Already listening", tag = "WhisperService")
             continuation.resume(null)
             return
         }
@@ -218,7 +217,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
         ) == PackageManager.PERMISSION_GRANTED
 
         if (!permissionGranted) {
-            println("No microphone permission")
+            CactusLogger.w("No microphone permission", tag = "WhisperService")
             continuation.resume(SpeechRecognitionResult(
                 success = false,
                 eventSuccess = false,
@@ -330,8 +329,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
                             whisperFreeParams(paramsPtr)
                         }
                     } catch (e: Exception) {
-                        println("Error during finalization: $e")
-                        e.printStackTrace()
+                        CactusLogger.e("Error during finalization: ${e.message}", tag = "WhisperService", throwable = e)
                         continuation.resume(SpeechRecognitionResult(
                             success = false,
                             text = "Error processing audio: ${e.message}"
@@ -389,8 +387,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
                         }
                     }
                 } catch (e: Exception) {
-                    println("Error during audio recording: $e")
-                    e.printStackTrace()
+                    CactusLogger.e("Error during audio recording: ${e.message}", tag = "WhisperService", throwable = e)
                     if (hasResumed.compareAndSet(false, true)) {
                         continuation.resume(SpeechRecognitionResult(
                             success = false,
@@ -402,8 +399,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             }.start()
 
         } catch (e: Exception) {
-            println("Failed to start Whisper speech recognition: $e")
-            e.printStackTrace()
+            CactusLogger.e("Failed to start Whisper speech recognition: ${e.message}", tag = "WhisperService", throwable = e)
             stopCurrentRecognition?.invoke()
             continuation.resume(SpeechRecognitionResult(
                 success = false,
@@ -437,8 +433,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
                 return samples
             }
         } catch (e: Exception) {
-            println("Error reading WAV file: $e")
-            e.printStackTrace()
+            CactusLogger.e("Error reading WAV file: ${e.message}", tag = "WhisperService", throwable = e)
             null
         }
     }
@@ -451,7 +446,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             audioRecord = null
             isListening = false
         } catch (e: Exception) {
-            println("Error stopping Whisper audio recording: $e")
+            CactusLogger.e("Error stopping Whisper audio recording: ${e.message}", tag = "WhisperService", throwable = e)
         }
     }
 

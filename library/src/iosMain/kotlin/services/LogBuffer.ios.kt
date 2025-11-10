@@ -5,6 +5,7 @@ import com.cactus.models.LogRecord
 import kotlinx.cinterop.*
 import kotlinx.serialization.json.Json
 import platform.Foundation.*
+import utils.CactusLogger
 
 @OptIn(ExperimentalForeignApi::class)
 actual object LogBuffer {
@@ -20,18 +21,18 @@ actual object LogBuffer {
 
             Json.decodeFromString<List<BufferedLogRecord>>(jsonString)
         } catch (e: Exception) {
-            println("Error loading failed log records: $e")
+            CactusLogger.e("LogBuffer", "Error loading failed log records", throwable = e)
             emptyList()
         }
     }
-    
+
     actual suspend fun clearFailedLogRecords() {
         try {
             val userDefaults = NSUserDefaults.standardUserDefaults
             userDefaults.removeObjectForKey(FAILED_LOG_RECORDS_KEY)
             userDefaults.synchronize()
         } catch (e: Exception) {
-            println("Error clearing failed log records: $e")
+            CactusLogger.e("LogBuffer", "Error clearing failed log records", throwable = e)
         }
     }
 
@@ -57,11 +58,11 @@ actual object LogBuffer {
         if (existingIndex >= 0) {
             val bufferedRecord = failedRecords[existingIndex]
             bufferedRecord.retryCount++
-            
+
             if (bufferedRecord.retryCount > MAX_RETRIES) {
                 failedRecords.removeAt(existingIndex)
             } else {
-                println("Retry ${bufferedRecord.retryCount}/${MAX_RETRIES} for buffered log record")
+                CactusLogger.d("LogBuffer", "Retry ${bufferedRecord.retryCount}/${MAX_RETRIES} for buffered log record")
             }
             saveFailedLogRecords(failedRecords)
         }
@@ -74,7 +75,7 @@ actual object LogBuffer {
             userDefaults.setObject(jsonString, FAILED_LOG_RECORDS_KEY)
             userDefaults.synchronize()
         } catch (e: Exception) {
-            println("Error saving failed log records: $e")
+            CactusLogger.e("LogBuffer", "Error saving failed log records", throwable = e)
         }
     }
 }

@@ -15,6 +15,7 @@ import platform.Foundation.NSFileManager
 import platform.Foundation.timeIntervalSinceReferenceDate
 import platform.Foundation.NSURL
 import utils.IOSFileUtils
+import utils.CactusLogger
 import kotlin.coroutines.resume
 
 // Whisper provider implementation for iOS
@@ -32,23 +33,23 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             val baseDir = IOSFileUtils.getModelsDirectory() ?: return@withContext false
             val modelDir = "$baseDir/$modelFolder"
 
-            println("Initializing Whisper with modelDir: $modelDir")
+            CactusLogger.i("WhisperService", "Initializing Whisper with modelDir: $modelDir")
 
             val fileManager = NSFileManager.defaultManager
             val modelExists = fileManager.fileExistsAtPath(modelDir)
 
             if (!modelExists) {
-                println("ERROR: Whisper model directory not found at $modelDir")
+                CactusLogger.e("WhisperService", "Whisper model directory not found at $modelDir")
                 return@withContext false
             }
 
             // Look for the model file - should be named {modelFolder}.bin
             val modelPath = "$modelDir/$modelFolder.bin"
             if (!fileManager.fileExistsAtPath(modelPath)) {
-                println("ERROR: Whisper model file not found at $modelPath")
+                CactusLogger.e("WhisperService", "Whisper model file not found at $modelPath")
                 // Try to find any .bin file in the directory
                 val files = fileManager.contentsOfDirectoryAtPath(modelDir, null)
-                println("Available files in model directory: $files")
+                CactusLogger.d("WhisperService", "Available files in model directory: $files")
                 return@withContext false
             }
 
@@ -56,24 +57,24 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             whisperContext = whisper_init_from_file(modelPath)
 
             if (whisperContext != null) {
-                println("Whisper model loaded successfully")
+                CactusLogger.i("WhisperService", "Whisper model loaded successfully")
                 audioEngine = AVAudioEngine()
                 val audioSession = AVAudioSession.sharedInstance()
                 try {
                     audioSession.setCategory(AVAudioSessionCategoryRecord, null)
                     audioSession.setActive(true, null)
                     isModelReady = true
-                    println("Whisper speech recognition initialized successfully")
+                    CactusLogger.i("WhisperService", "Whisper speech recognition initialized successfully")
                 } catch (e: Exception) {
-                    println("Failed to set up audio session: $e")
+                    CactusLogger.e("WhisperService", "Failed to set up audio session", throwable = e)
                 }
             } else {
-                println("Failed to load Whisper model")
+                CactusLogger.e("WhisperService", "Failed to load Whisper model")
             }
 
             isModelReady
         } catch (e: Exception) {
-            println("Failed to initialize Whisper speech recognition: $e")
+            CactusLogger.e("WhisperService", "Failed to initialize Whisper speech recognition", throwable = e)
             false
         }
     }
@@ -88,7 +89,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
     override suspend fun performRecognition(params: SpeechRecognitionParams, filePath: String?): SpeechRecognitionResult? =
         suspendCancellableCoroutine { continuation ->
             if (!isModelReady || whisperContext == null) {
-                println("Whisper model not ready, returning setup message")
+                CactusLogger.w("WhisperService", "Whisper model not ready, returning setup message")
                 if (continuation.isActive) {
                     continuation.resume(SpeechRecognitionResult(
                         success = false,
@@ -102,7 +103,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
                 performFileBasedRecognition(filePath, params, continuation)
             } else {
                 if (isListening) {
-                    println("Already listening, returning null")
+                    CactusLogger.w("WhisperService", "Already listening, returning null")
                     if (continuation.isActive) {
                         continuation.resume(null)
                     }
@@ -111,7 +112,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
 
                 val permissionGranted = AVAudioSession.sharedInstance().recordPermission == AVAudioSessionRecordPermissionGranted
                 if (!permissionGranted) {
-                    println("No microphone permission")
+                    CactusLogger.w("WhisperService", "No microphone permission")
                     if (continuation.isActive) {
                         continuation.resume(SpeechRecognitionResult(
                             success = false,
@@ -137,7 +138,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             // Check if file exists
             val fileManager = NSFileManager.defaultManager
             if (!fileManager.fileExistsAtPath(filePath)) {
-                println("Audio file does not exist: $filePath")
+                CactusLogger.e("WhisperService", "Audio file does not exist: $filePath")
                 if (continuation.isActive) {
                     continuation.resume(SpeechRecognitionResult(
                         success = false,
@@ -152,7 +153,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             val audioFile = try {
                 AVAudioFile(fileUrl, null)
             } catch (e: Exception) {
-                println("Failed to open audio file: $filePath, error: $e")
+                CactusLogger.e("WhisperService", "Failed to open audio file: $filePath", throwable = e)
                 if (continuation.isActive) {
                     continuation.resume(SpeechRecognitionResult(
                         success = false,
@@ -166,13 +167,13 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             val fileFormat = audioFile.processingFormat
             val sampleRate = fileFormat.sampleRate
             val channelCount = fileFormat.channelCount.toInt()
-            
-            println("Audio file format: sampleRate=$sampleRate, channels=$channelCount")
+
+            CactusLogger.d("WhisperService", "Audio file format: sampleRate=$sampleRate, channels=$channelCount")
 
             // Read all frames from the file
             val frameCount = audioFile.length.toInt()
             if (frameCount == 0) {
-                println("Audio file is empty")
+                CactusLogger.e("WhisperService", "Audio file is empty")
                 if (continuation.isActive) {
                     continuation.resume(SpeechRecognitionResult(
                         success = false,
@@ -185,7 +186,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             // Create buffer to hold audio data
             val buffer = AVAudioPCMBuffer(fileFormat, frameCount.toUInt())
             if (buffer == null) {
-                println("Failed to create audio buffer")
+                CactusLogger.e("WhisperService", "Failed to create audio buffer")
                 if (continuation.isActive) {
                     continuation.resume(SpeechRecognitionResult(
                         success = false,
@@ -199,7 +200,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             try {
                 audioFile.readIntoBuffer(buffer, null)
             } catch (e: Exception) {
-                println("Failed to read audio data: $e")
+                CactusLogger.e("WhisperService", "Failed to read audio data", throwable = e)
                 if (continuation.isActive) {
                     continuation.resume(SpeechRecognitionResult(
                         success = false,
@@ -211,7 +212,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
 
             val actualFrameCount = buffer.frameLength.toInt()
             if (actualFrameCount == 0) {
-                println("No audio data read from file")
+                CactusLogger.e("WhisperService", "No audio data read from file")
                 if (continuation.isActive) {
                     continuation.resume(SpeechRecognitionResult(
                         success = false,
@@ -224,7 +225,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             // Get float channel data (mono or take first channel if stereo)
             val floatChannelData = buffer.floatChannelData?.get(0)
             if (floatChannelData == null) {
-                println("Failed to get audio channel data")
+                CactusLogger.e("WhisperService", "Failed to get audio channel data")
                 if (continuation.isActive) {
                     continuation.resume(SpeechRecognitionResult(
                         success = false,
@@ -250,14 +251,14 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             }
             
             val sampleCount = floatSamples.size
-            println("Processed $sampleCount samples for Whisper")
+            CactusLogger.d("WhisperService", "Processed $sampleCount samples for Whisper")
 
             // Setup Whisper parameters and process audio
             memScoped {
                 val paramsPtr = whisper_full_default_params_by_ref(whisper_sampling_strategy.WHISPER_SAMPLING_GREEDY)
-                
+
                 if (paramsPtr == null) {
-                    println("Failed to get whisper parameters")
+                    CactusLogger.e("WhisperService", "Failed to get whisper parameters")
                     if (continuation.isActive) {
                         continuation.resume(SpeechRecognitionResult(
                             success = false,
@@ -278,7 +279,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
                         )
 
                         if (result != 0) {
-                            println("Whisper processing failed with code: $result")
+                            CactusLogger.e("WhisperService", "Whisper processing failed with code: $result")
                             if (continuation.isActive) {
                                 continuation.resume(SpeechRecognitionResult(
                                     success = false,
@@ -316,7 +317,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             }
 
         } catch (e: Exception) {
-            println("Error during Whisper file-based recognition: $e")
+            CactusLogger.e("WhisperService", "Error during Whisper file-based recognition", throwable = e)
             if (continuation.isActive) {
                 continuation.resume(SpeechRecognitionResult(
                     success = false,
@@ -336,7 +337,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             val recordingStartTime = (NSDate.timeIntervalSinceReferenceDate * 1000).toLong()
 
             val audioEngine = this.audioEngine ?: run {
-                println("Audio engine not initialized")
+                CactusLogger.e("WhisperService", "Audio engine not initialized")
                 isListening = false
                 if (continuation.isActive) {
                     continuation.resume(SpeechRecognitionResult(
@@ -349,9 +350,9 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
 
             val inputNode = audioEngine.inputNode
             val recordingFormat = inputNode.outputFormatForBus(0u)
-            
+
             if (recordingFormat.sampleRate == 0.0) {
-                println("Invalid recording format")
+                CactusLogger.e("WhisperService", "Invalid recording format")
                 isListening = false
                 if (continuation.isActive) {
                     continuation.resume(SpeechRecognitionResult(
@@ -374,7 +375,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
                         audioEngine.stop()
                         inputNode.removeTapOnBus(0u)
                     } catch (e: Exception) {
-                        println("Error stopping audio engine: $e")
+                        CactusLogger.e("WhisperService", "Error stopping audio engine", throwable = e)
                     }
 
                     // Process accumulated audio
@@ -393,9 +394,9 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
                     // Setup Whisper parameters and process accumulated audio
                     memScoped {
                         val paramsPtr = whisper_full_default_params_by_ref(whisper_sampling_strategy.WHISPER_SAMPLING_GREEDY)
-                        
+
                         if (paramsPtr == null) {
-                            println("Failed to get whisper parameters")
+                            CactusLogger.e("WhisperService", "Failed to get whisper parameters")
                             if (continuation.isActive) {
                                 continuation.resume(SpeechRecognitionResult(
                                     success = false,
@@ -417,7 +418,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
                                 )
 
                                 if (result != 0) {
-                                    println("Whisper processing failed with code: $result")
+                                    CactusLogger.e("WhisperService", "Whisper processing failed with code: $result")
                                     if (continuation.isActive) {
                                         continuation.resume(SpeechRecognitionResult(
                                             success = false,
@@ -518,7 +519,7 @@ class WhisperSpeechRecognitionProvider : SpeechRecognitionProvider {
             audioEngine.startAndReturnError(null)
 
         } catch (e: Exception) {
-            println("Failed to start Whisper speech recognition: $e")
+            CactusLogger.e("WhisperService", "Failed to start Whisper speech recognition", throwable = e)
             stopCurrentRecognition?.invoke()
             if (continuation.isActive) {
                 continuation.resume(SpeechRecognitionResult(

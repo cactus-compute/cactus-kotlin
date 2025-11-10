@@ -15,6 +15,7 @@ import platform.Foundation.NSURL
 import platform.Foundation.NSUserDomainMask
 import platform.Foundation.dataWithContentsOfURL
 import platform.Foundation.writeToFile
+import utils.CactusLogger
 
 @OptIn(ExperimentalForeignApi::class)
 object IOSFileUtils {
@@ -55,7 +56,7 @@ object IOSFileUtils {
             val data: NSData = NSData.Companion.dataWithContentsOfURL(nsUrl) ?: return false
             data.writeToFile(filePath, true)
         } catch (e: Exception) {
-            println("Error downloading file from $urlString to $filePath: $e")
+            CactusLogger.e("IOSFileUtils", "Error downloading file from $urlString to $filePath", throwable = e)
             false
         }
     }
@@ -74,29 +75,29 @@ object IOSFileUtils {
             paths.forEach { zipEntryPath ->
                 zipFileSystem.source(zipEntryPath).buffer().use { source ->
                     val fullPath = zipEntryPath.toString().trimStart('/')
-                    
+
                     // Strip the first directory level if it exists (removes the top-level folder from zip)
                     val relativeFilePath = if (fullPath.contains('/')) {
                         fullPath.substringAfter('/')
                     } else {
                         fullPath
                     }
-                    
+
                     val fileToWrite = outputDir.resolve(relativeFilePath)
                     fileToWrite.createParentDirectories()
                     fileSystem.sink(fileToWrite).buffer().use { sink ->
                         val bytes = sink.writeAll(source)
-                        println("Unzipped: $relativeFilePath to $fileToWrite; $bytes bytes written")
+                        CactusLogger.d("IOSFileUtils", "Unzipped: $relativeFilePath to $fileToWrite; $bytes bytes written")
                     }
                 }
             }
-            
+
             val extractedFiles = fileSystem.listRecursively(outputDir).toList()
-            println("Extraction completed. Found ${extractedFiles.size} total items in $outputDir")
-            
+            CactusLogger.d("IOSFileUtils", "Extraction completed. Found ${extractedFiles.size} total items in $outputDir")
+
             true
         } catch (e: Exception) {
-            println("Error unzipping $zipFilePath to $outputDir: $e")
+            CactusLogger.e("IOSFileUtils", "Error unzipping $zipFilePath to $outputDir", throwable = e)
             e.printStackTrace()
             false
         }

@@ -10,6 +10,7 @@ import kotlinx.coroutines.withContext
 import platform.CoreCrypto.CC_SHA1
 import platform.CoreCrypto.CC_SHA1_DIGEST_LENGTH
 import platform.Foundation.NSBundle
+import utils.CactusLogger
 import kotlin.math.max
 
 // Global variables for iOS callback handling
@@ -108,8 +109,8 @@ actual object CactusContext {
     ): CactusEmbeddingResult = withContext(Dispatchers.Default) {
         return@withContext memScoped {
             val bufferSize = max(text.length * quantization, 1024)
-            println("CactusContext: Generating embedding for text: ${if (text.length > 50) text.substring(0, 50) + "..." else text}")
-            println("CactusContext: Buffer allocated for $bufferSize float elements")
+            CactusLogger.d("CactusContext", "Generating embedding for text: ${if (text.length > 50) text.substring(0, 50) + "..." else text}")
+            CactusLogger.d("CactusContext", "Buffer allocated for $bufferSize float elements")
 
             val embeddingDimPtr = alloc<ULongVar>()
             val embeddingsBuffer = allocArray<FloatVar>(bufferSize)
@@ -125,11 +126,11 @@ actual object CactusContext {
                 embeddingDimPtr.ptr
             )
 
-            println("CactusContext: Received embedding result code: $result")
+            CactusLogger.d("CactusContext", "Received embedding result code: $result")
 
             if (result > 0) {
                 val actualEmbeddingDim = embeddingDimPtr.value.toInt()
-                println("CactusContext: Actual embedding dimension: $actualEmbeddingDim")
+                CactusLogger.d("CactusContext", "Actual embedding dimension: $actualEmbeddingDim")
 
                 if (actualEmbeddingDim > bufferSize) {
                     return@memScoped CactusEmbeddingResult(
@@ -145,7 +146,7 @@ actual object CactusContext {
                     embeddings.add(embeddingsBuffer[i].toDouble())
                 }
 
-                println("CactusContext: Successfully extracted ${embeddings.size} embedding values")
+                CactusLogger.d("CactusContext", "Successfully extracted ${embeddings.size} embedding values")
 
                 CactusEmbeddingResult(
                     success = true,

@@ -4,6 +4,7 @@ import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import utils.IOSFileUtils
+import utils.CactusLogger
 
 @OptIn(ExperimentalForeignApi::class)
 actual suspend fun downloadAndExtractModels(tasks: List<DownloadTask>): Boolean {
@@ -13,7 +14,7 @@ actual suspend fun downloadAndExtractModels(tasks: List<DownloadTask>): Boolean 
             for (task in tasks) {
                 val modelFolderPath = "$modelsDir/${task.folder}"
                 if (IOSFileUtils.fileExists(modelFolderPath)) {
-                    println("Model folder already exists at $modelFolderPath")
+                    CactusLogger.i("ModelDownloader", "Model folder already exists at $modelFolderPath")
                     continue
                 }
 
@@ -27,14 +28,14 @@ actual suspend fun downloadAndExtractModels(tasks: List<DownloadTask>): Boolean 
                 )
 
                 if (!success) {
-                    println("Download and extraction failed for ${task.filename}")
+                    CactusLogger.e("ModelDownloader", "Download and extraction failed for ${task.filename}")
                     return@withContext false
                 }
-                println("Download and extraction completed for ${task.filename}")
+                CactusLogger.i("ModelDownloader", "Download and extraction completed for ${task.filename}")
             }
             true
         } catch (e: Exception) {
-            println("Download and extraction failed: $e")
+            CactusLogger.e("ModelDownloader", "Download and extraction failed", throwable = e)
             false
         }
     }
@@ -49,7 +50,7 @@ actual suspend fun modelExists(modelName: String): Boolean = withContext(Dispatc
 
         modelExists
     } catch (e: Exception) {
-        println("Error checking downloaded models: $e")
+        CactusLogger.e("ModelDownloader", "Error checking downloaded models", throwable = e)
         false
     }
 }

@@ -1,16 +1,17 @@
 
 package com.cactus
 
-import io.ktor.client.* 
-import io.ktor.client.call.* 
-import io.ktor.client.plugins.contentnegotiation.* 
-import io.ktor.client.request.* 
-import io.ktor.http.* 
-import io.ktor.serialization.kotlinx.json.* 
-import kotlinx.serialization.Serializable 
-import kotlinx.serialization.json.Json 
-import okio.ByteString.Companion.toByteString 
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import okio.ByteString.Companion.toByteString
 import okio.Path.Companion.toPath
+import utils.CactusLogger
 
 @Serializable
 data class WisprFlowRequest(
@@ -42,15 +43,14 @@ class WisprFlow {
                 header(HttpHeaders.Authorization, "Bearer $apiKey")
             }
             if (response.status == HttpStatusCode.OK) {
-                println("WisprFlow API warmed up.")
+                CactusLogger.i("WisprFlow API warmed up.", tag = "WisprFlow")
                 warmedUp = true
             } else {
                 val errorBody = response.body<String>()
-                println("Error from WisprFlow API during warm-up: ${response.status} - $errorBody")
+                CactusLogger.e("Error from WisprFlow API during warm-up: ${response.status} - $errorBody", tag = "WisprFlow")
             }
         } catch (e: Exception) {
-            println("Error during WisprFlow warm-up: ${e.message}")
-            e.printStackTrace()
+            CactusLogger.e("Error during WisprFlow warm-up: ${e.message}", tag = "WisprFlow", throwable = e)
         }
     }
 
@@ -82,11 +82,10 @@ class WisprFlow {
                 )
             } else {
                 val errorBody = response.body<String>()
-                println("Error from WisprFlow API: ${response.status} - $errorBody")
+                CactusLogger.e("Error from WisprFlow API: ${response.status} - $errorBody", tag = "WisprFlow")
             }
         } catch (e: Exception) {
-            println("Error during WisprFlow transcription: ${e.message}")
-            e.printStackTrace()
+            CactusLogger.e("Error during WisprFlow transcription: ${e.message}", tag = "WisprFlow", throwable = e)
         }
         return result
     }

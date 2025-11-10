@@ -4,6 +4,7 @@ import com.cactus.CactusModel
 import com.cactus.VoiceModel
 import kotlinx.serialization.json.Json
 import platform.Foundation.*
+import utils.CactusLogger
 
 internal actual object ModelCache {
     private const val MODELS_KEY = "cactus_models"
@@ -16,7 +17,7 @@ internal actual object ModelCache {
             userDefaults.setObject(jsonString, forKey = "${MODELS_KEY}_${model.slug}")
             userDefaults.synchronize()
         } catch (e: Exception) {
-            println("Error saving models to cache: $e")
+            CactusLogger.e("ModelCache", "Error saving models to cache", throwable = e)
         }
     }
 
@@ -27,7 +28,7 @@ internal actual object ModelCache {
             if (jsonString.isNullOrEmpty()) return null
             Json.decodeFromString<CactusModel>(jsonString)
         } catch (e: Exception) {
-            println("Error loading models from cache: $e")
+            CactusLogger.e("ModelCache", "Error loading models from cache", throwable = e)
             null
         }
     }
@@ -39,7 +40,7 @@ internal actual object ModelCache {
             userDefaults.setObject(jsonString, forKey = VOICE_MODELS_KEY)
             userDefaults.synchronize()
         } catch (e: Exception) {
-            println("Error saving voice models to cache: $e")
+            CactusLogger.e("ModelCache", "Error saving voice models to cache", throwable = e)
         }
     }
 
@@ -50,7 +51,7 @@ internal actual object ModelCache {
             if (jsonString.isNullOrEmpty()) return emptyList()
             Json.decodeFromString<List<VoiceModel>>(jsonString)
         } catch (e: Exception) {
-            println("Error loading voice models from cache: $e")
+            CactusLogger.e("ModelCache", "Error loading voice models from cache", throwable = e)
             emptyList()
         }
     }

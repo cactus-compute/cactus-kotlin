@@ -5,6 +5,7 @@ import platform.CoreFoundation.*
 import platform.Foundation.*
 import platform.UIKit.*
 import com.cactus.util.native.*
+import utils.CactusLogger
 import kotlin.experimental.ExperimentalNativeApi
 
 @OptIn(ExperimentalForeignApi::class, ExperimentalNativeApi::class)
@@ -39,10 +40,10 @@ actual suspend fun getDeviceId(): String? {
     return try {
         val deviceIdPtr = get_device_id()
         val deviceId = deviceIdPtr?.toKString()
-        
+
         deviceId
     } catch (e: Exception) {
-        println("Error getting device ID from native library: $e")
+        CactusLogger.e("DeviceInfo", "Error getting device ID from native library", throwable = e)
         null
     }
 }
@@ -52,10 +53,10 @@ actual suspend fun registerApp(encString: String): String? {
     return try {
         val deviceIdPtr = register_app(encString)
         val deviceId = deviceIdPtr?.toKString()
-        
+
         deviceId
     } catch (e: Exception) {
-        println("Error registering app with native library: $e")
+        CactusLogger.e("DeviceInfo", "Error registering app with native library", throwable = e)
         null
     }
 }

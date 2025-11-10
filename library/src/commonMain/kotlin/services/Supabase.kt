@@ -13,6 +13,7 @@ import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import com.cactus.BuildConfig
+import utils.CactusLogger
 
 /**
  * Device registration request
@@ -43,33 +44,33 @@ object Supabase {
             val success = sendLogRecordsBatch(listOf(record))
             
             if (success) {
-                println("Successfully sent current log record")
-                
+                CactusLogger.d("Successfully sent current log record", tag = "Supabase")
+
                 val failedRecords = LogBuffer.loadFailedLogRecords()
                 if (failedRecords.isNotEmpty()) {
-                    println("Attempting to send ${failedRecords.size} buffered log records...")
-                    
+                    CactusLogger.i("Attempting to send ${failedRecords.size} buffered log records...", tag = "Supabase")
+
                     val bufferedSuccess = sendLogRecordsBatch(
                         failedRecords.map { it.record }
                     )
-                    
+
                     if (bufferedSuccess) {
                         LogBuffer.clearFailedLogRecords()
-                        println("Successfully sent ${failedRecords.size} buffered log records")
+                        CactusLogger.i("Successfully sent ${failedRecords.size} buffered log records", tag = "Supabase")
                     } else {
                         failedRecords.forEach { buffered ->
                             LogBuffer.handleRetryFailedLogRecord(buffered.record)
                         }
-                        println("Failed to send buffered records, keeping them for next successful attempt")
+                        CactusLogger.w("Failed to send buffered records, keeping them for next successful attempt", tag = "Supabase")
                     }
                 }
             } else {
                 LogBuffer.handleFailedLogRecord(record)
-                println("Current log record failed, added to buffer")
+                CactusLogger.w("Current log record failed, added to buffer", tag = "Supabase")
             }
             success
         } catch (e: Exception) {
-            println("Error sending log record: $e")
+            CactusLogger.e("Error sending log record: $e", tag = "Supabase", throwable = e)
             LogBuffer.handleFailedLogRecord(record)
             false
         }
@@ -86,18 +87,18 @@ object Supabase {
                 
                 setBody(records)
             }
-            
-            println("Response from Supabase: ${response.status}")
-            
+
+            CactusLogger.d("Response from Supabase: ${response.status}", tag = "Supabase")
+
             if (response.status != HttpStatusCode.Created && response.status != HttpStatusCode.OK) {
                 val responseBody = response.body<String>()
-                println("Error response body: $responseBody")
+                CactusLogger.e("Error response body: $responseBody", tag = "Supabase")
                 return false
             }
-            
+
             true
         } catch (e: Exception) {
-            println("Error in sendLogRecordsBatch: $e")
+            CactusLogger.e("Error in sendLogRecordsBatch: $e", tag = "Supabase", throwable = e)
             false
         }
     }
@@ -110,13 +111,13 @@ object Supabase {
             }
             
             if (response.status == HttpStatusCode.OK) {
-                println("Device registered successfully")
+                CactusLogger.i("Device registered successfully", tag = "Supabase")
                 com.cactus.utils.registerApp(response.body<String>())
             } else {
                 null
             }
         } catch (e: Exception) {
-            println("Error registering device: $e")
+            CactusLogger.e("Error registering device: $e", tag = "Supabase", throwable = e)
             null
         }
     }
@@ -137,7 +138,7 @@ object Supabase {
                 null
             }
         } catch (e: Exception) {
-            println("Error fetching models: $e")
+            CactusLogger.e("Error fetching model: $e", tag = "Supabase", throwable = e)
             null
         }
     }
@@ -154,7 +155,7 @@ object Supabase {
                 emptyList()
             }
         } catch (e: Exception) {
-            println("Error fetching models: $e")
+            CactusLogger.e("Error fetching models: $e", tag = "Supabase", throwable = e)
             emptyList()
         }
     }
@@ -179,7 +180,7 @@ object Supabase {
                 ModelCache.loadVoiceModels()
             }
         } catch (e: Exception) {
-            println("Error fetching voice models: $e")
+            CactusLogger.e("Error fetching voice models: $e", tag = "Supabase", throwable = e)
             ModelCache.loadVoiceModels()
         }
     }
