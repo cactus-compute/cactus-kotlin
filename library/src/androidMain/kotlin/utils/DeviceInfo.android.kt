@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.Build
 import android.provider.Settings
 import com.cactus.CactusContextInitializer
+import utils.CactusLogger
 
 // External JNI functions that will be loaded from the cactus_util library
 external fun nativeRegisterApp(encryptedPayload: String): String?
@@ -37,11 +38,11 @@ actual suspend fun getDeviceId(): String? {
         // Initialize data directory if not already done
         val context = CactusContextInitializer.getApplicationContext()
         nativeSetAndroidDataDirectory(context.filesDir.absolutePath)
-        
+
         // Get device ID from your native library
         nativeGetDeviceId()
     } catch (e: Exception) {
-        println("Error getting device ID from native library: $e")
+        CactusLogger.e("Error getting device ID from native library: ${e.message}", tag = "DeviceInfo", throwable = e)
         null
     }
 }
@@ -51,11 +52,11 @@ actual suspend fun registerApp(encString: String): String? {
         // Initialize data directory if not already done
         val context = CactusContextInitializer.getApplicationContext()
         nativeSetAndroidDataDirectory(context.filesDir.absolutePath)
-        
+
         // Register app and get device ID from your native library
         nativeRegisterApp(encString)
     } catch (e: Exception) {
-        println("Error registering app with native library: $e")
+        CactusLogger.e("Error registering app with native library: ${e.message}", tag = "DeviceInfo", throwable = e)
         null
     }
 }

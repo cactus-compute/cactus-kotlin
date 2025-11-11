@@ -8,6 +8,7 @@ import com.cactus.TranscriptionMode
 import com.cactus.models.LogRecord
 import com.cactus.utils.getDeviceId
 import com.cactus.utils.getDeviceMetadata
+import utils.CactusLogger
 
 /**
  * Telemetry service for logging and analytics
@@ -28,20 +29,20 @@ class Telemetry private constructor(
         
         fun init(projectId: String?, deviceId: String?) {
             _instance = Telemetry(projectId, deviceId)
-            println("Telemetry initialized with projectId: $projectId, deviceId: $deviceId")
+            CactusLogger.i("Telemetry initialized with projectId: $projectId, deviceId: $deviceId", tag = "Telemetry")
         }
-        
+
         suspend fun fetchDeviceId(): String? {
             val deviceId = getDeviceId()
             if (deviceId == null) {
-                println("Failed to get device ID, registering device...")
+                CactusLogger.w("Failed to get device ID, registering device...", tag = "Telemetry")
                 return try {
                     val deviceData = getDeviceMetadata()
                     // Convert Any values to String for registration
                     val stringDeviceData = deviceData.mapValues { it.value.toString() }
                     Supabase.registerDevice(stringDeviceData)
                 } catch (e: Exception) {
-                    println("Error during device registration: $e")
+                    CactusLogger.e("Error during device registration: $e", tag = "Telemetry", throwable = e)
                     null
                 }
             }

@@ -6,6 +6,7 @@ import com.cactus.services.Supabase
 import com.cactus.services.Telemetry
 import com.cactus.services.ToolFilterConfig
 import com.cactus.services.ToolFilterService
+import utils.CactusLogger
 import kotlin.time.TimeSource
 
 class CactusLM(
@@ -49,7 +50,7 @@ class CactusLM(
         
         // If initialization failed and model is not downloaded, try to download first
         if (_handle == null && !modelExists(modelFolder)) {
-            println("Failed to initialize model context with model at $modelPath, trying to download the model first.")
+            CactusLogger.i("Failed to initialize model context with model at $modelPath, trying to download the model first.", tag = "CactusLM")
             downloadModel(model = modelFolder)
             return initializeModel(params)
         }
@@ -119,7 +120,7 @@ class CactusLM(
             if (filteredParams.cactusToken != null) {
                 openRouterModule.generateCompletion(messages, filteredParams, filteredParams.cactusToken, onToken)
             } else {
-                println("Remote inference requires an apiKey.")
+                CactusLogger.w("Remote inference requires an apiKey.", tag = "CactusLM")
                 null
             }
         }
@@ -164,12 +165,12 @@ class CactusLM(
             ?: ""
         
         val filteredTools = _toolFilterService!!.filterTools(userQuery, tools)
-        
+
         if (filteredTools.size != tools.size) {
-            println("Tool filtering: ${tools.size} -> ${filteredTools.size} tools")
-            println("Filtered tools: ${filteredTools.joinToString(", ") { it.function.name }}")
+            CactusLogger.d("Tool filtering: ${tools.size} -> ${filteredTools.size} tools", tag = "CactusLM")
+            CactusLogger.d("Filtered tools: ${filteredTools.joinToString(", ") { it.function.name }}", tag = "CactusLM")
         }
-        
+
         return filteredTools
     }
 
@@ -182,26 +183,26 @@ class CactusLM(
         val quantization = Supabase.getModel(model)?.quantization ?: 8
 
         if (currentHandle == null) {
-            println("CactusLM: Context not initialized")
+            CactusLogger.w("Context not initialized", tag = "CactusLM")
             return null
         }
 
         try {
-            println("CactusLM: Generating embedding for text: ${if (text.length > 50) text.substring(0, 50) + "..." else text}")
-            
+            CactusLogger.d("Generating embedding for text: ${if (text.length > 50) text.substring(0, 50) + "..." else text}", tag = "CactusLM")
+
             val result = CactusContext.generateEmbedding(currentHandle, text, quantization)
-            
-            println("CactusLM: Embedding generation ${if (result.success) "completed successfully" else "failed"}: " +
+
+            CactusLogger.i("Embedding generation ${if (result.success) "completed successfully" else "failed"}: " +
                     "dimension=${result.dimension}, " +
-                    "embeddings_length=${result.embeddings.size}")
+                    "embeddings_length=${result.embeddings.size}", tag = "CactusLM")
 
             if (Telemetry.isInitialized) {
                 Telemetry.instance?.logEmbedding(result, _lastInitializedModel)
             }
-            
+
             return result
         } catch (e: Exception) {
-            println("CactusLM: Exception during embedding generation: $e")
+            CactusLogger.e("Exception during embedding generation: $e", tag = "CactusLM", throwable = e)
             if (Telemetry.isInitialized) {
                 Telemetry.instance?.logEmbedding(CactusEmbeddingResult(success = false), _lastInitializedModel, message = e.message)
             }
