@@ -62,14 +62,16 @@ extern "C" {
 extern "C" {
 
 JNIEXPORT jlong JNICALL
-Java_com_cactus_CactusLibrary_cactus_1init(JNIEnv *env, jclass clazz, jstring model_path, jint context_size) {
+Java_com_cactus_CactusLibrary_cactus_1init(JNIEnv *env, jclass clazz, jstring model_path, jint context_size, jstring corpus_dir) {
     const char *path = env->GetStringUTFChars(model_path, 0);
+    const char *corpus = corpus_dir ? env->GetStringUTFChars(corpus_dir, 0) : nullptr;
     LOGI("Initializing cactus with model: %s, context_size: %d", path, context_size);
-    
-    cactus_model_t model = cactus_init(path, static_cast<size_t>(context_size));
-    
+
+    cactus_model_t model = cactus_init(path, static_cast<size_t>(context_size), corpus);
+
     env->ReleaseStringUTFChars(model_path, path);
-    
+    if (corpus) env->ReleaseStringUTFChars(corpus_dir, corpus);
+
     return reinterpret_cast<jlong>(model);
 }
 
