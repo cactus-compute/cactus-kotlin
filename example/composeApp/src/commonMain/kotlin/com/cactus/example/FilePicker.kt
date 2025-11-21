@@ -4,7 +4,8 @@ import androidx.compose.runtime.Composable
 
 @Composable
 expect fun rememberFilePickerLauncher(
-    onFileSelected: (String?) -> Unit
+    onFileSelected: (String?) -> Unit,
+    mimeType: String
 ): FilePickerLauncher
 
 interface FilePickerLauncher {

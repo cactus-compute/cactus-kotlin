@@ -6,7 +6,7 @@ internal object CactusLibrary {
     }
     
     @JvmName("cactus_init")
-    external fun cactus_init(modelPath: String, contextSize: UInt): Long
+    external fun cactus_init(modelPath: String, contextSize: UInt, corpusDir: String?): Long
     external fun cactus_complete(
         model: Long,
         messagesJson: String,

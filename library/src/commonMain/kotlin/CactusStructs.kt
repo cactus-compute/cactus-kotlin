@@ -42,6 +42,7 @@ data class CactusEmbeddingResult(
 data class ChatMessage(
     val content: String,
     val role: String,
+    val images: List<String> = emptyList(),
     val timestamp: Long? = null
 )
 

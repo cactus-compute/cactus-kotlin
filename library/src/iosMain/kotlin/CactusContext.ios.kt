@@ -30,7 +30,8 @@ private val nativeTokenCallback = staticCFunction { token: CPointer<ByteVar>?, t
 actual object CactusContext {
     actual suspend fun initContext(modelPath: String, contextSize: UInt): Long? = withContext(Dispatchers.Default) {
         return@withContext memScoped {
-            val handle = cactus_init(modelPath, contextSize.toULong())
+            // We are not using corpusDir for now, passing null pointer
+            val handle = cactus_init(modelPath, contextSize.toULong(), null)
             handle?.rawValue?.toLong()
         }
     }

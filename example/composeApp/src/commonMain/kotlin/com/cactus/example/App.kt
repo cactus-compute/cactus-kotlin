@@ -35,6 +35,7 @@ import com.cactus.example.pages.FunctionCallingPage
 import com.cactus.example.pages.HybridCompletionPage
 import com.cactus.example.pages.StreamingCompletionPage
 import com.cactus.example.pages.TranscriptionPage
+import com.cactus.example.pages.VisionPage
 
 data class ExampleItem(
     val title: String,
@@ -81,6 +82,10 @@ fun App() {
             title = "Transcription",
             description = "Audio transcription capabilities"
         ) { TranscriptionPage { currentPage = null } },
+        ExampleItem(
+            title = "Vision",
+            description = "Image analysis with vision models"
+        ) { VisionPage { currentPage = null } },
         ExampleItem(
             title = "Chat",
             description = "Chat with cactus"

@@ -15,7 +15,8 @@ actual object CactusContext {
     actual suspend fun initContext(modelPath: String, contextSize: UInt): Long? = withContext(Dispatchers.Default) {
         try {
             Log.d("Cactus", "Initializing context with model: $modelPath")
-            val handle = lib.cactus_init(modelPath, contextSize)
+            // We are not using corpusDir for now, passing null pointer
+            val handle = lib.cactus_init(modelPath, contextSize, null)
             if (handle != 0L) {
                 Log.d("Cactus", "Context initialized successfully")
                 handle

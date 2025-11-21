@@ -3,6 +3,8 @@ package com.cactus.services
 import com.cactus.CactusModel
 
 object CactusTelemetry {
+    var isTelemetryEnabled: Boolean = true
+
     fun setTelemetryToken(token: String) {
         Telemetry.instance?.setCactusToken(token)
     }

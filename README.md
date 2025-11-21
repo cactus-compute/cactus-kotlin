@@ -24,7 +24,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation("com.cactuscompute:cactus:1.0.1-beta")
+                implementation("com.cactuscompute:cactus:1.0.2-beta")
             }
         }
     }
@@ -60,7 +60,10 @@ class MainActivity : ComponentActivity() {
 ```kotlin
 import com.cactus.services.CactusTelemetry
 
-// Initialize telemetry for usage analytics (optional)
+// Disable telemetry (optional, enabled by default)
+CactusTelemetry.isTelemetryEnabled = false
+
+// Set your organization's telemetry token (optional)
 CactusTelemetry.setTelemetryToken("your_token_here")
 ```
 
