@@ -167,7 +167,8 @@ fun TranscriptionPage(onBack: () -> Unit) {
         }
     }
 
-    val filePickerLauncher = rememberFilePickerLauncher { selectedPath ->
+    val filePickerLauncher = rememberFilePickerLauncher(
+    onFileSelected = { selectedPath ->
         scope.launch {
             when {
                 selectedPath != null -> {
@@ -209,8 +210,9 @@ fun TranscriptionPage(onBack: () -> Unit) {
                 }
             }
         }
-    }
-
+    },
+    mimeType = "audio/*"
+)
     fun transcribeFromFile() {
         scope.launch {
             isPreparingFile = true
