@@ -24,7 +24,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation("com.cactuscompute:cactus:1.0.1-beta")
+                implementation("com.cactuscompute:cactus:1.0.2-beta")
             }
         }
     }
