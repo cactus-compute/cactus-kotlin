@@ -40,9 +40,14 @@ object Supabase {
     }
 
     suspend fun sendLogRecord(record: LogRecord): Boolean {
+        if (!CactusTelemetry.isTelemetryEnabled) {
+            CactusLogger.d("Telemetry is disabled, skipping log record", tag = "Supabase")
+            return true
+        }
+
         return try {
             val success = sendLogRecordsBatch(listOf(record))
-            
+
             if (success) {
                 CactusLogger.d("Successfully sent current log record", tag = "Supabase")
 
@@ -104,12 +109,17 @@ object Supabase {
     }
 
     suspend fun registerDevice(deviceData: Map<String, String>): String? {
+        if (!CactusTelemetry.isTelemetryEnabled) {
+            CactusLogger.d("Telemetry is disabled, returning telemetry-disabled device ID", tag = "Supabase")
+            return com.cactus.utils.registerApp("telemetry-disabled")
+        }
+
         return try {
             val response = client.post("$SUPABASE_URL/functions/v1/device-registration") {
                 header("Content-Type", "application/json")
                 setBody(DeviceRegistrationRequest(device_data = deviceData))
             }
-            
+
             if (response.status == HttpStatusCode.OK) {
                 CactusLogger.i("Device registered successfully", tag = "Supabase")
                 com.cactus.utils.registerApp(response.body<String>())
