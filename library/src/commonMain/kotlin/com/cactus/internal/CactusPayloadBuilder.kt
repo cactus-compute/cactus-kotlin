@@ -24,6 +24,14 @@ internal object CactusPayloadBuilder {
                 append("{")
                 append("\"role\":\"${message.role}\",")
                 append("\"content\":\"${escapeJsonString(message.content)}\"")
+                if (message.images.isNotEmpty()) {
+                    append(",\"images\":[")
+                    message.images.forEachIndexed { imgIndex, image ->
+                        if (imgIndex > 0) append(",")
+                        append("\"${escapeJsonString(image)}\"")
+                    }
+                    append("]")
+                }
                 append("}")
             }
             append("]")
