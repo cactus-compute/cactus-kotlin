@@ -407,6 +407,100 @@ runBlocking {
 - If SEMANTIC strategy fails (e.g., model not supporting embeddings), it falls back to SIMPLE strategy
 - Tool filtering can be disabled entirely by setting `enableToolFiltering = false`
 
+## Vision / Image Analysis
+
+The `CactusLM` class supports vision models that can analyze and describe images. Vision models can process both text prompts and image inputs to provide detailed descriptions and analysis.
+
+### Basic Vision Usage
+
+```kotlin
+import com.cactus.CactusLM
+import com.cactus.CactusInitParams
+import com.cactus.CactusCompletionParams
+import com.cactus.ChatMessage
+import kotlinx.coroutines.runBlocking
+
+runBlocking {
+    val lm = CactusLM()
+
+    try {
+        // Get available vision models
+        val models = lm.getModels()
+        val visionModels = models.filter { it.supports_vision }
+
+        // Download and initialize a vision model
+        lm.downloadModel(visionModels.first().slug)
+        lm.initializeModel(CactusInitParams(model = visionModels.first().slug))
+
+        // Analyze an image
+        val result = lm.generateCompletion(
+            messages = listOf(
+                ChatMessage("You are a helpful AI assistant that can analyze images.", "system"),
+                ChatMessage(
+                    content = "Describe this image in detail.",
+                    role = "user",
+                    images = listOf("/path/to/image.jpg")
+                )
+            ),
+            params = CactusCompletionParams(maxTokens = 300)
+        )
+
+        result?.let { response ->
+            if (response.success) {
+                println("Analysis: ${response.response}")
+                println("Tokens per second: ${response.tokensPerSecond}")
+                println("Time to first token: ${response.timeToFirstTokenMs}ms")
+            }
+        }
+    } finally {
+        lm.unload()
+    }
+}
+```
+
+### Streaming Vision Analysis
+
+```kotlin
+runBlocking {
+    val lm = CactusLM()
+
+    // Download and initialize a vision model
+    val visionModel = lm.getModels().first { it.supports_vision }
+    lm.downloadModel(visionModel.slug)
+    lm.initializeModel(CactusInitParams(model = visionModel.slug))
+
+    var streamingResponse = ""
+
+    val result = lm.generateCompletion(
+        messages = listOf(
+            ChatMessage("You are a helpful AI assistant that can analyze images.", "system"),
+            ChatMessage(
+                content = "What do you see in this image?",
+                role = "user",
+                images = listOf("/path/to/image.jpg")
+            )
+        ),
+        params = CactusCompletionParams(maxTokens = 300),
+        onToken = { token, _ ->
+            streamingResponse += token
+            print(token)
+        }
+    )
+
+    println("\n\nFinal analysis: ${result?.response}")
+
+    lm.unload()
+}
+```
+
+### Vision API Notes
+
+- Vision models are identified by the `supports_vision` property in `CactusModel`
+- Images are passed via the `images` parameter in `ChatMessage` as file paths
+- Supports both streaming and non-streaming modes
+- Compatible with all standard completion parameters (temperature, maxTokens, etc.)
+- See the `VisionPage.kt` example in `example/composeApp/src/commonMain/kotlin/com/cactus/example/pages/` for a complete UI implementation
+
 ## Speech-to-Text (STT)
 
 The `CactusSTT` class provides speech recognition capabilities using on-device models from **Whisper**.

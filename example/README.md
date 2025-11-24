@@ -58,6 +58,16 @@ The examples are organized as a single Kotlin Multiplatform app with navigation 
   - Text-to-vector conversion
   - Embedding dimensions and vector inspection
 
+#### 7. **Vision / Image Analysis** (`VisionPage.kt`)
+- **What it demonstrates**: Image analysis using vision models
+- **Features**:
+  - Vision model discovery and filtering
+  - Model downloading and initialization
+  - Image file selection
+  - Real-time streaming image analysis
+  - Vision-specific performance metrics (TTFT, TPS)
+  - Multi-modal input handling (text + images)
+
 ## 🚀 How to Run
 
 1. **Setup Dependencies**:
