@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cactus.*
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,15 +35,21 @@ fun StreamingCompletionPage(onBack: () -> Unit) {
         scope.launch {
             isDownloading = true
             outputText = "Downloading model..."
-            
+
             try {
                 lm.downloadModel()
-                isModelDownloaded = true
-                outputText = "Model downloaded successfully! Click \"Initialize Model\" to load it."
+                if (isActive) {
+                    isModelDownloaded = true
+                    outputText = "Model downloaded successfully! Click \"Initialize Model\" to load it."
+                }
             } catch (e: Exception) {
-                outputText = "Error downloading model: ${e.message}"
+                if (isActive) {
+                    outputText = "Error downloading model: ${e.message}"
+                }
             } finally {
-                isDownloading = false
+                if (isActive) {
+                    isDownloading = false
+                }
             }
         }
     }
@@ -51,15 +58,21 @@ fun StreamingCompletionPage(onBack: () -> Unit) {
         scope.launch {
             isInitializing = true
             outputText = "Initializing model..."
-            
+
             try {
                 lm.initializeModel(CactusInitParams())
-                isModelLoaded = true
-                outputText = "Model initialized successfully! Ready to generate completions."
+                if (isActive) {
+                    isModelLoaded = true
+                    outputText = "Model initialized successfully! Ready to generate completions."
+                }
             } catch (e: Exception) {
-                outputText = "Error initializing model: ${e.message}"
+                if (isActive) {
+                    outputText = "Error initializing model: ${e.message}"
+                }
             } finally {
-                isInitializing = false
+                if (isActive) {
+                    isInitializing = false
+                }
             }
         }
     }
@@ -69,13 +82,13 @@ fun StreamingCompletionPage(onBack: () -> Unit) {
             outputText = "Please download and initialize model first."
             return
         }
-        
+
         scope.launch {
             isGenerating = true
             streamingResponse = ""
             outputText = "Generating streaming response..."
             var firstToken = true
-            
+
             try {
                 val resp = lm.generateCompletion(
                     messages = listOf(
@@ -93,22 +106,28 @@ fun StreamingCompletionPage(onBack: () -> Unit) {
                         streamingResponse += token
                     }
                 )
-                
-                if (resp != null && resp.success) {
-                    lastTPS = resp.tokensPerSecond ?: 0.0
-                    lastTTFT = resp.timeToFirstTokenMs ?: 0.0
-                    outputText = "Streaming completion generated successfully!"
-                } else {
-                    outputText = "Failed to generate streaming response."
+
+                if (isActive) {
+                    if (resp != null && resp.success) {
+                        lastTPS = resp.tokensPerSecond ?: 0.0
+                        lastTTFT = resp.timeToFirstTokenMs ?: 0.0
+                        outputText = "Streaming completion generated successfully!"
+                    } else {
+                        outputText = "Failed to generate streaming response."
+                        lastTPS = 0.0
+                        lastTTFT = 0.0
+                    }
+                }
+            } catch (e: Exception) {
+                if (isActive) {
+                    outputText = "Error generating streaming response: ${e.message}"
                     lastTPS = 0.0
                     lastTTFT = 0.0
                 }
-            } catch (e: Exception) {
-                outputText = "Error generating streaming response: ${e.message}"
-                lastTPS = 0.0
-                lastTTFT = 0.0
             } finally {
-                isGenerating = false
+                if (isActive) {
+                    isGenerating = false
+                }
             }
         }
     }

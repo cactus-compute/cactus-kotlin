@@ -15,6 +15,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.cactus.*
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -35,11 +36,11 @@ fun HybridCompletionPage(onBack: () -> Unit) {
             outputText = "Please enter your Cactus token first."
             return
         }
-        
+
         scope.launch {
             isGenerating = true
             outputText = "Generating cloud-based response..."
-            
+
             try {
                 val resp = lm.generateCompletion(
                     messages = listOf(
@@ -52,25 +53,31 @@ fun HybridCompletionPage(onBack: () -> Unit) {
                         cactusToken = cactusToken
                     )
                 )
-                
-                if (resp != null && resp.success) {
-                    lastResponse = resp.response
-                    lastTPS = resp.tokensPerSecond ?: 0.0
-                    lastTTFT = resp.timeToFirstTokenMs ?: 0.0
-                    outputText = "Cloud completion generated successfully!"
-                } else {
-                    outputText = "Failed to generate cloud response. Check your token and connection."
+
+                if (isActive) {
+                    if (resp != null && resp.success) {
+                        lastResponse = resp.response
+                        lastTPS = resp.tokensPerSecond ?: 0.0
+                        lastTTFT = resp.timeToFirstTokenMs ?: 0.0
+                        outputText = "Cloud completion generated successfully!"
+                    } else {
+                        outputText = "Failed to generate cloud response. Check your token and connection."
+                        lastResponse = null
+                        lastTPS = 0.0
+                        lastTTFT = 0.0
+                    }
+                }
+            } catch (e: Exception) {
+                if (isActive) {
+                    outputText = "Error generating cloud response: ${e.message}"
                     lastResponse = null
                     lastTPS = 0.0
                     lastTTFT = 0.0
                 }
-            } catch (e: Exception) {
-                outputText = "Error generating cloud response: ${e.message}"
-                lastResponse = null
-                lastTPS = 0.0
-                lastTTFT = 0.0
             } finally {
-                isGenerating = false
+                if (isActive) {
+                    isGenerating = false
+                }
             }
         }
     }

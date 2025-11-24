@@ -24,6 +24,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.cactus.*
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -106,24 +107,30 @@ fun ChatPage(onBack: () -> Unit) {
 
                         // Scroll to bottom
                         scope.launch {
-                            listState.animateScrollToItem(chatMessages.size - 1)
+                            if (isActive) {
+                                listState.animateScrollToItem(chatMessages.size - 1)
+                            }
                         }
                     }
                 )
 
-                // Update the last assistant message with the result
-                val lastMessage = chatMessages.lastOrNull()
-                if (lastMessage?.role == MessageRole.Assistant) {
-                    chatMessages = chatMessages.dropLast(1) +
-                        lastMessage.copy(result = result)
-                }
+                if (isActive) {
+                    // Update the last assistant message with the result
+                    val lastMessage = chatMessages.lastOrNull()
+                    if (lastMessage?.role == MessageRole.Assistant) {
+                        chatMessages = chatMessages.dropLast(1) +
+                            lastMessage.copy(result = result)
+                    }
 
-                isLoading = false
+                    isLoading = false
+                }
             } catch (e: Exception) {
-                // Remove typing indicator
-                chatMessages = chatMessages.filter { it.role != MessageRole.Typing }
-                println("Error generating response: ${e.message}")
-                isLoading = false
+                if (isActive) {
+                    // Remove typing indicator
+                    chatMessages = chatMessages.filter { it.role != MessageRole.Typing }
+                    println("Error generating response: ${e.message}")
+                    isLoading = false
+                }
             }
         }
     }

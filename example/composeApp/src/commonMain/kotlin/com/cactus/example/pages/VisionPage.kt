@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cactus.*
 import com.cactus.example.rememberFilePickerLauncher
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -75,12 +76,18 @@ fun VisionPage(onBack: () -> Unit) {
                 lm.downloadModel(
                     model = selectedModel!!
                 )
-                isModelDownloaded = true
-                outputText = "Model downloaded successfully! Click \"Initialize Model\" to load it."
+                if (isActive) {
+                    isModelDownloaded = true
+                    outputText = "Model downloaded successfully! Click \"Initialize Model\" to load it."
+                }
             } catch (e: Exception) {
-                outputText = "Error downloading model: ${e.message}"
+                if (isActive) {
+                    outputText = "Error downloading model: ${e.message}"
+                }
             } finally {
-                isDownloading = false
+                if (isActive) {
+                    isDownloading = false
+                }
             }
         }
     }
@@ -97,12 +104,18 @@ fun VisionPage(onBack: () -> Unit) {
 
             try {
                 lm.initializeModel(CactusInitParams(model = selectedModel))
-                isModelLoaded = true
-                outputText = "Model initialized successfully! Pick an image to analyze."
+                if (isActive) {
+                    isModelLoaded = true
+                    outputText = "Model initialized successfully! Pick an image to analyze."
+                }
             } catch (e: Exception) {
-                outputText = "Error initializing model: ${e.message}"
+                if (isActive) {
+                    outputText = "Error initializing model: ${e.message}"
+                }
             } finally {
-                isInitializing = false
+                if (isActive) {
+                    isInitializing = false
+                }
             }
         }
     }
@@ -146,21 +159,27 @@ fun VisionPage(onBack: () -> Unit) {
                     }
                 )
 
-                if (resp != null && resp.success) {
-                    lastTPS = resp.tokensPerSecond ?: 0.0
-                    lastTTFT = resp.timeToFirstTokenMs ?: 0.0
-                    outputText = "Image analysis completed successfully!"
-                } else {
-                    outputText = "Failed to analyze image."
+                if (isActive) {
+                    if (resp != null && resp.success) {
+                        lastTPS = resp.tokensPerSecond ?: 0.0
+                        lastTTFT = resp.timeToFirstTokenMs ?: 0.0
+                        outputText = "Image analysis completed successfully!"
+                    } else {
+                        outputText = "Failed to analyze image."
+                        lastTPS = 0.0
+                        lastTTFT = 0.0
+                    }
+                }
+            } catch (e: Exception) {
+                if (isActive) {
+                    outputText = "Error analyzing image: ${e.message}"
                     lastTPS = 0.0
                     lastTTFT = 0.0
                 }
-            } catch (e: Exception) {
-                outputText = "Error analyzing image: ${e.message}"
-                lastTPS = 0.0
-                lastTTFT = 0.0
             } finally {
-                isGenerating = false
+                if (isActive) {
+                    isGenerating = false
+                }
             }
         }
     }
