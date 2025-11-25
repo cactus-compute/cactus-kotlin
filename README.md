@@ -40,7 +40,7 @@ kotlin {
 ## Getting Started
 
 ### Context Initialization (Required)
-Initialize the Cactus context in your Activity's `onCreate()` method before using any SDK functionality:
+Initialize the Cactus context in your Activity's `onCreate()` method before using any SDK functionality:f
 ```kotlin
 import com.cactus.CactusContextInitializer
 
@@ -269,7 +269,7 @@ val result = lm.generateCompletion(
 - `CactusCompletionParams(model: String? = null, temperature: Double? = null, topK: Int? = null, topP: Double? = null, maxTokens: Int = 200, stopSequences: List<String> = listOf("<|im_end|>", "<end_of_turn>"), tools: List<CactusTool> = emptyList(), mode: InferenceMode = InferenceMode.LOCAL, cactusToken: String? = null)` - Parameters for text completion.
 - `CactusCompletionResult(success: Boolean, response: String? = null, timeToFirstTokenMs: Double? = null, totalTimeMs: Double? = null, tokensPerSecond: Double? = null, prefillTokens: Int? = null, decodeTokens: Int? = null, totalTokens: Int? = null, toolCalls: List<ToolCall>? = emptyList())` - The result of a text completion.
 - `CactusEmbeddingResult(success: Boolean, embeddings: List<Double> = listOf(), dimension: Int? = null, errorMessage: String? = null)` - The result of embedding generation.
-- `ChatMessage(content: String, role: String, timestamp: Long? = null)` - A chat message with role (e.g., "user", "assistant").
+- `ChatMessage(content: String, role: String, timestamp: Long? = null, images: List<String>)` - A chat message with role (e.g., "user", "assistant").
 - `CactusModel(created_at: String, slug: String, download_url: String, size_mb: Int, supports_tool_calling: Boolean, supports_vision: Boolean, name: String, isDownloaded: Boolean = false, quantization: Int = 8)` - Information about an available model.
 - `InferenceMode` - Enum for selecting inference mode (`LOCAL`, `REMOTE`, `LOCAL_FIRST`, `REMOTE_FIRST`).
 - `ToolCall(name: String, arguments: Map<String, String>)` - Represents a tool call returned by the model.
