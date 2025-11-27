@@ -1,6 +1,7 @@
 package com.cactus.internal
 
 import com.cactus.CactusCompletionResult
+import com.cactus.CactusTranscriptionResult
 import com.cactus.ToolCall
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.decodeFromJsonElement
@@ -47,6 +48,33 @@ internal object CactusJsonParser {
             decodeTokens = decodeTokens,
             totalTokens = totalTokens,
             toolCalls = toolCalls
+        )
+    }
+
+    fun parseTranscriptionResult(
+        responseText: String
+    ): CactusTranscriptionResult {
+        val jsonResponse = json.parseToJsonElement(responseText).jsonObject
+        val success =
+            jsonResponse["success"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true
+
+        val text = jsonResponse["text"]?.jsonPrimitive?.content ?: responseText
+
+        val timeToFirstTokenMs =
+            jsonResponse["time_to_first_token_ms"]?.jsonPrimitive?.content?.toDoubleOrNull()
+                ?: 0.0
+        val totalTimeMs =
+            jsonResponse["total_time_ms"]?.jsonPrimitive?.content?.toDoubleOrNull() ?: 0.0
+        val tokensPerSecond =
+            jsonResponse["tokens_per_second"]?.jsonPrimitive?.content?.toDoubleOrNull()
+                ?: 0.0
+
+        return CactusTranscriptionResult(
+            success = success,
+            text = text,
+            timeToFirstTokenMs = timeToFirstTokenMs,
+            totalTimeMs = totalTimeMs,
+            tokensPerSecond = tokensPerSecond
         )
     }
 }

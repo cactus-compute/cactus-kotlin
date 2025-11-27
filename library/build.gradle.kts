@@ -18,7 +18,7 @@ plugins {
 }
 
 group = "com.cactus"
-version = "1.0.2-beta"
+version = "1.1-beta"
 
 buildConfig {
     packageName("com.cactus")
@@ -95,29 +95,6 @@ kotlin {
                         "-framework", "Metal", "-framework", "MetalKit")
                     
                     compilerOpts("-L${libraryPath.absolutePath}", "-lcactus_util")
-                    extraOpts("-libraryPath", libraryPath.absolutePath)
-                }
-
-                val whisper by creating {
-                    defFile(project.file("src/iosMain/cinterop/whisper.def"))
-                    packageName("com.whisper.native")
-
-                    val archPath = when (iosTarget.name) {
-                        "iosArm64" -> "ios-arm64"
-                        "iosX64" -> "ios-arm64-simulator"
-                        "iosSimulatorArm64" -> "ios-arm64-simulator"
-                        else -> "ios-arm64"
-                    }
-
-                    val headerPath = project.file("src/commonMain/resources/ios/include")
-                    val libraryPath = project.file("src/commonMain/resources/ios/lib/$archPath")
-
-                    includeDirs(headerPath)
-
-                    compilerOpts("-framework", "Foundation", "-framework", "Accelerate",
-                        "-framework", "Metal", "-framework", "MetalKit")
-
-                    compilerOpts("-L${libraryPath.absolutePath}", "-lwhisper")
                     extraOpts("-libraryPath", libraryPath.absolutePath)
                 }
             }

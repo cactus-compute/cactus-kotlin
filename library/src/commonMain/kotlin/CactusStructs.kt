@@ -19,6 +19,21 @@ data class CactusCompletionParams(
     val cactusToken: String? = null
 )
 
+data class CactusTranscriptionParams(
+    val model: String? = null,
+    val maxTokens: Int = 512,
+    val stopSequences: List<String> = listOf("<|im_end|>", "<end_of_turn>"),
+)
+
+data class CactusTranscriptionResult(
+    val success: Boolean,
+    val text: String? = null,
+    val timeToFirstTokenMs: Double? = null,
+    val totalTimeMs: Double? = null,
+    val tokensPerSecond: Double? = null,
+    val errorMessage: String? = null
+)
+
 data class CactusCompletionResult(
     val success: Boolean,
     val response: String? = null,
@@ -117,10 +132,6 @@ sealed class SpeechState {
 
 enum class TranscriptionMode {
     LOCAL, REMOTE, LOCAL_FIRST, REMOTE_FIRST
-}
-
-enum class TranscriptionProvider {
-    WHISPER
 }
 
 enum class InferenceMode {

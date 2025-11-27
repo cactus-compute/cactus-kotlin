@@ -22,11 +22,10 @@ import kotlinx.coroutines.withContext
 fun TranscriptionPage(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     
-    var currentProvider by remember { mutableStateOf(TranscriptionProvider.WHISPER) }
-    var stt by remember { mutableStateOf(CactusSTT(currentProvider)) }
+    var stt by remember { mutableStateOf(CactusSTT()) }
     
     var voiceModels by remember { mutableStateOf<List<VoiceModel>>(emptyList()) }
-    var selectedModel by remember { mutableStateOf("tiny") }
+    var selectedModel by remember { mutableStateOf("whisper-medium") }
     
     var isModelLoaded by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
@@ -36,7 +35,7 @@ fun TranscriptionPage(onBack: () -> Unit) {
     var isUsingDefaultModel by remember { mutableStateOf(false) }
     var isPreparingFile by remember { mutableStateOf(false) }
     var outputText by remember { mutableStateOf("Ready to start. Select a model and initialize to begin.") }
-    var lastResponse by remember { mutableStateOf<SpeechRecognitionResult?>(null) }
+    var lastResponse by remember { mutableStateOf<CactusTranscriptionResult?>(null) }
     var downloadProgress by remember { mutableStateOf("") }
     var downloadPercentage by remember { mutableStateOf<Float?>(null) }
 
@@ -52,7 +51,7 @@ fun TranscriptionPage(onBack: () -> Unit) {
         lastResponse = null
         downloadProgress = ""
         downloadPercentage = null
-        selectedModel = "tiny"
+        selectedModel = "whisper-medium"
         outputText = "Ready to start. Select a model and initialize to begin."
     }
 
@@ -93,11 +92,15 @@ fun TranscriptionPage(onBack: () -> Unit) {
             downloadPercentage = null
             
             try {
-                val downloadSuccess = stt.download(
-                    model = selectedModel,
-                )
-                
-                if (!downloadSuccess) {
+                try {
+                    stt.downloadModel(
+                        model = selectedModel,
+                    )
+                    isDownloading = false
+                    downloadProgress = ""
+                    downloadPercentage = null
+                    outputText = "Model downloaded successfully! Initializing..."
+                } catch (e: Exception) {
                     isDownloading = false
                     isInitializing = false
                     downloadProgress = ""
@@ -106,19 +109,14 @@ fun TranscriptionPage(onBack: () -> Unit) {
                     return@launch
                 }
                 
-                isDownloading = false
-                downloadProgress = ""
-                downloadPercentage = null
-                outputText = "Model downloaded successfully! Initializing..."
-                
-                val initSuccess = stt.init(model = selectedModel)
-                isInitializing = false
-                
-                if (initSuccess) {
+                try {
+                    stt.initializeModel(CactusInitParams(model = selectedModel))
+                    isInitializing = false
                     isModelLoaded = true
                     outputText = "Model downloaded and initialized successfully! Ready to transcribe audio."
-                } else {
+                } catch (e: Exception) {
                     outputText = "Failed to initialize model."
+                    return@launch
                 }
             } catch (e: Exception) {
                 isDownloading = false
@@ -130,42 +128,42 @@ fun TranscriptionPage(onBack: () -> Unit) {
         }
     }
 
-    fun transcribeFromMicrophone() {
-        if (!isModelLoaded) {
-            outputText = "Please initialize the model first."
-            return
-        }
-        
-        scope.launch {
-            try {
-                isTranscribing = true
-                outputText = "Listening for audio... Speak now!"
-                
-                val params = SpeechRecognitionParams(
-                    sampleRate = 16000,
-                    maxDuration = 30000, // 30 seconds
-                    maxSilenceDuration = 3000, // 3 seconds of silence
-                )
-                
-                val result = withContext(Dispatchers.Default) {
-                    stt.transcribe(params = params)
-                }
-                
-                isTranscribing = false
-                if (result != null && result.success) {
-                    lastResponse = result
-                    outputText = "Transcription completed successfully!"
-                } else {
-                    outputText = result?.text ?: "Failed to transcribe audio."
-                    lastResponse = null
-                }
-            } catch (e: Exception) {
-                isTranscribing = false
-                outputText = "Error during transcription: ${e.message}"
-                lastResponse = null
-            }
-        }
-    }
+//    fun transcribeFromMicrophone() {
+//        if (!isModelLoaded) {
+//            outputText = "Please initialize the model first."
+//            return
+//        }
+//
+//        scope.launch {
+//            try {
+//                isTranscribing = true
+//                outputText = "Listening for audio... Speak now!"
+//
+//                val params = SpeechRecognitionParams(
+//                    sampleRate = 16000,
+//                    maxDuration = 30000, // 30 seconds
+//                    maxSilenceDuration = 3000, // 3 seconds of silence
+//                )
+//
+//                val result = withContext(Dispatchers.Default) {
+//                    stt.transcribe(params = params)
+//                }
+//
+//                isTranscribing = false
+//                if (result != null && result.success) {
+//                    lastResponse = result
+//                    outputText = "Transcription completed successfully!"
+//                } else {
+//                    outputText = result?.text ?: "Failed to transcribe audio."
+//                    lastResponse = null
+//                }
+//            } catch (e: Exception) {
+//                isTranscribing = false
+//                outputText = "Error during transcription: ${e.message}"
+//                lastResponse = null
+//            }
+//        }
+//    }
 
     val filePickerLauncher = rememberFilePickerLauncher(
     onFileSelected = { selectedPath ->
@@ -185,8 +183,8 @@ fun TranscriptionPage(onBack: () -> Unit) {
                         
                         val result = withContext(Dispatchers.Default) {
                             stt.transcribe(
-                                params = params,
-                                filePath = selectedPath
+                                filePath = selectedPath,
+                                prompt = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>"
                             )
                         }
                         
@@ -282,54 +280,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
                         style = MaterialTheme.typography.bodyMedium
                     )
                     
-                    HorizontalDivider()
-                    
-                    Text(
-                        "Provider Selection",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    var providerExpanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = providerExpanded,
-                        onExpandedChange = { 
-                            if (!isModelLoaded) providerExpanded = !providerExpanded 
-                        }
-                    ) {
-                        OutlinedTextField(
-                            value = when (currentProvider) {
-                                TranscriptionProvider.WHISPER -> "Whisper"
-                            },
-                            onValueChange = {},
-                            readOnly = true,
-                            enabled = !isModelLoaded,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = providerExpanded) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor()
-                        )
-                        
-                        ExposedDropdownMenu(
-                            expanded = providerExpanded,
-                            onDismissRequest = { providerExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Whisper") },
-                                onClick = {
-                                    if (currentProvider != TranscriptionProvider.WHISPER) {
-                                        currentProvider = TranscriptionProvider.WHISPER
-                                        resetState()
-                                        stt.stop()
-                                        stt = CactusSTT(currentProvider)
-                                        loadVoiceModels()
-                                    }
-                                    providerExpanded = false
-                                }
-                            )
-                        }
-                    }
-                    
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -405,8 +355,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
 
             Button(
                 onClick = { downloadAndInitializeModel() },
-                enabled = !isDownloading && !isInitializing && !isModelLoaded && 
-                         !isLoadingModels && (voiceModels.isNotEmpty() || isUsingDefaultModel),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (isDownloading || isInitializing) {
@@ -459,8 +407,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
                     onClick = { 
                         if (isTranscribing) {
                             stopTranscription()
-                        } else {
-                            transcribeFromMicrophone()
                         }
                     },
                     enabled = !isDownloading && !isInitializing && isModelLoaded && !isLoadingModels,
@@ -531,7 +477,7 @@ fun TranscriptionPage(onBack: () -> Unit) {
                                     )
                                 }
                                 
-                                response.processingTime?.let { time ->
+                                response.totalTimeMs?.let { time ->
                                     Text(
                                         text = "Processing time: ${time.toInt()}ms",
                                         style = MaterialTheme.typography.bodySmall,

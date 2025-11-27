@@ -18,4 +18,13 @@ expect object CactusContext {
         text: String,
         quantization: Int = 8
     ): CactusEmbeddingResult
+
+    suspend fun transcribe(
+        handle: Long,
+        audioFilePath: String,
+        prompt: String,
+        params: CactusTranscriptionParams,
+        onToken: CactusStreamingCallback? = null,
+        quantization: Int
+    ): CactusTranscriptionResult
 }

@@ -1,6 +1,7 @@
 package com.cactus.internal
 
 import com.cactus.CactusCompletionParams
+import com.cactus.CactusTranscriptionParams
 import com.cactus.ChatMessage
 
 internal object CactusPayloadBuilder {
@@ -56,6 +57,21 @@ internal object CactusPayloadBuilder {
                     ",\"stop_sequences\":[${params.stopSequences.joinToString(",") {
                             "\"${escapeJsonString(it)}\""
                         }}}]"
+                )
+            }
+            append("}")
+        }
+    }
+
+    fun buildParamsJson(params: CactusTranscriptionParams): String {
+        return buildString {
+            append("{")
+            append("\"max_tokens\":${params.maxTokens}")
+            if (params.stopSequences.isNotEmpty()) {
+                append(
+                    ",\"stop_sequences\":[${params.stopSequences.joinToString(",") {
+                        "\"${escapeJsonString(it)}\""
+                    }}}]"
                 )
             }
             append("}")
