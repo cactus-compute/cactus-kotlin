@@ -61,7 +61,7 @@ class CactusSTT() {
 
     suspend fun transcribe(
         filePath: String,
-        prompt: String,
+        prompt: String = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>",
         params: CactusTranscriptionParams = CactusTranscriptionParams(),
         onToken: CactusStreamingCallback? = null,
         mode: TranscriptionMode = TranscriptionMode.LOCAL,
