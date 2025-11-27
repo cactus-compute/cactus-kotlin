@@ -58,7 +58,16 @@ internal object CactusJsonParser {
         val success =
             jsonResponse["success"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: true
 
-        val text = jsonResponse["text"]?.jsonPrimitive?.content ?: responseText
+        // Check for both "text" and "response" fields to maintain compatibility
+        val rawText = jsonResponse["text"]?.jsonPrimitive?.content
+            ?: jsonResponse["response"]?.jsonPrimitive?.content
+            ?: responseText
+
+        // Clean up special tokens from the transcription
+        val text = rawText
+            .replace(Regex("<\\|startoftranscript\\|[^>]*>"), "")
+            .replace(Regex("<\\|[^>]+\\|>"), "")
+            .trim()
 
         val timeToFirstTokenMs =
             jsonResponse["time_to_first_token_ms"]?.jsonPrimitive?.content?.toDoubleOrNull()
