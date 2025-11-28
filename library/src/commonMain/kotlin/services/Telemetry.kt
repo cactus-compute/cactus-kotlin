@@ -3,6 +3,7 @@ package com.cactus.services
 import com.cactus.CactusCompletionResult
 import com.cactus.CactusEmbeddingResult
 import com.cactus.CactusInitParams
+import com.cactus.CactusTranscriptionResult
 import com.cactus.InferenceMode
 import com.cactus.TranscriptionMode
 import com.cactus.models.LogRecord
@@ -94,7 +95,7 @@ class Telemetry private constructor(
     }
 
     suspend fun logTranscription(
-        result: CactusCompletionResult?,
+        result: CactusTranscriptionResult?,
         model: String,
         message: String? = null,
         responseTime: Double? = null,

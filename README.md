@@ -24,7 +24,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation("com.cactuscompute:cactus:1.0.2-beta")
+                implementation("com.cactuscompute:cactus:1.2.0-beta")
             }
         }
     }
@@ -509,68 +509,73 @@ The `CactusSTT` class provides speech recognition capabilities using on-device m
 
 ```kotlin
 import com.cactus.CactusSTT
-import com.cactus.SpeechRecognitionParams
+import com.cactus.CactusInitParams
+import com.cactus.CactusTranscriptionParams
 import kotlinx.coroutines.runBlocking
 
 runBlocking {
     val stt = CactusSTT()
 
-    // Download a Whisper model (e.g., whisper-tiny)
-    val downloadSuccess = stt.download("whisper-tiny")
-    
-    // Initialize the model
-    val initSuccess = stt.init("whisper-tiny")
+    try {
+        // Download a Whisper model (e.g., whisper-tiny)
+        // Throws exception on failure
+        stt.downloadModel("whisper-tiny")
 
-    // Transcribe from microphone
-    val result = stt.transcribe(
-        SpeechRecognitionParams(
-            maxSilenceDuration = 1000L,
-            maxDuration = 30000L,
-            sampleRate = 16000
+        // Initialize the model
+        // Throws exception on failure
+        stt.initializeModel(CactusInitParams(model = "whisper-tiny"))
+
+        // Transcribe from an audio file
+        val result = stt.transcribe(
+            filePath = "/path/to/audio.wav",
+            params = CactusTranscriptionParams()
         )
-    )
 
-    result?.let { transcription ->
-        if (transcription.success) {
-            println("Transcribed: ${transcription.text}")
-            println("Processing time: ${transcription.processingTime}ms")
+        result?.let { transcription ->
+            if (transcription.success) {
+                println("Transcribed: ${transcription.text}")
+                println("Total time: ${transcription.totalTimeMs}ms")
+            }
         }
+    } catch (e: Exception) {
+        println("Transcription failed: ${e.message}")
     }
-
-    // Stop transcription
-    stt.stop()
 }
 ```
 
-#### Transcribing from an Audio File
+### Streaming Transcription
+
 ```kotlin
 import com.cactus.CactusSTT
-import com.cactus.SpeechRecognitionParams
+import com.cactus.CactusInitParams
+import com.cactus.CactusTranscriptionParams
 import kotlinx.coroutines.runBlocking
 
 runBlocking {
     val stt = CactusSTT()
 
-    // Download a Whisper model (e.g., whisper-tiny)
-    val downloadSuccess = stt.download("whisper-tiny")
-    
-    // Initialize the model
-    val initSuccess = stt.init("whisper-tiny")
+    try {
+        // Download and initialize model
+        stt.downloadModel("whisper-tiny")
+        stt.initializeModel(CactusInitParams(model = "whisper-tiny"))
 
-    // Transcribe from an audio file
-    val fileResult = stt.transcribe(
-        params = SpeechRecognitionParams(),
-        filePath = "/path/to/audio.wav"
-    )
+        // Transcribe with token streaming
+        val result = stt.transcribe(
+            filePath = "/path/to/audio.wav",
+            params = CactusTranscriptionParams(),
+            onToken = { token, _ ->
+                print(token)
+            }
+        )
 
-    fileResult?.let { transcription ->
-        if (transcription.success) {
-            println("Transcribed: ${transcription.text}")
+        result?.let { transcription ->
+            if (transcription.success) {
+                println("\nFinal transcription: ${transcription.text}")
+            }
         }
+    } catch (e: Exception) {
+        println("Transcription failed: ${e.message}")
     }
-
-    // Stop transcription
-    stt.stop()
 }
 ```
 
@@ -587,8 +592,8 @@ runBlocking {
 ```kotlin
 // Transcribe from audio file with remote fallback
 val fileResult = stt.transcribe(
-    params = SpeechRecognitionParams(),
     filePath = "/path/to/audio.wav",
+    params = CactusTranscriptionParams(),
     mode = TranscriptionMode.LOCAL_FIRST,
     apiKey = "your_wispr_api_key"
 )
@@ -606,21 +611,20 @@ stt.isModelDownloaded("whisper-tiny")
 ### STT API Reference
 
 #### CactusSTT Class
-- `CactusSTT(provider: TranscriptionProvider = TranscriptionProvider.WHISPER)` - Constructor to specify the transcription provider.
-- `suspend fun download(model: String = "whisper-tiny"): Boolean` - Download an STT model (e.g., "whisper-tiny" or "whisper-base"). Defaults to last downloaded model.
-- `suspend fun init(model: String = "whisper-tiny"): Boolean` - Initialize an STT model for transcription. Defaults to last downloaded model.
-- `suspend fun transcribe(params: SpeechRecognitionParams = SpeechRecognitionParams(), filePath: String? = null, mode: TranscriptionMode = TranscriptionMode.LOCAL, apiKey: String? = null): SpeechRecognitionResult?` - Transcribe speech from microphone or file. Supports different transcription modes.
+- `CactusSTT()` - Constructor for the STT service.
+- `suspend fun downloadModel(model: String = "whisper-tiny")` - Download an STT model (e.g., "whisper-tiny" or "whisper-base"). Defaults to last initialized model. Throws exception on failure.
+- `suspend fun initializeModel(params: CactusInitParams)` - Initialize an STT model for transcription using the model specified in params. Throws exception on failure.
+- `suspend fun transcribe(filePath: String, prompt: String = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>", params: CactusTranscriptionParams = CactusTranscriptionParams(), onToken: CactusStreamingCallback? = null, mode: TranscriptionMode = TranscriptionMode.LOCAL, apiKey: String? = null): CactusTranscriptionResult?` - Transcribe speech from an audio file. Supports streaming via the `onToken` callback and different transcription modes (local, remote, and fallbacks).
 - `suspend fun warmUpWispr(apiKey: String)` - Warms up the remote Wispr service for lower latency.
-- `fun stop()` - Stop ongoing transcription.
 - `fun isReady(): Boolean` - Check if the STT service is initialized and ready.
-- `suspend fun getVoiceModels(provider: TranscriptionProvider = this.provider): List<VoiceModel>` - Get a list of available voice models for the specified provider. Defaults to the instance's provider.
-- `suspend fun isModelDownloaded(modelName: String = "whisper-tiny"): Boolean` - Check if a specific model has been downloaded. Defaults to last downloaded model.
+- `suspend fun getVoiceModels(): List<VoiceModel>` - Get a list of available voice models. Results are cached locally to reduce network requests.
+- `suspend fun isModelDownloaded(modelName: String = "whisper-tiny"): Boolean` - Check if a specific model has been downloaded. Defaults to last initialized model.
 
 #### Data Classes
-- `TranscriptionProvider` - Enum for selecting the provider (`WHISPER`).
-- `SpeechRecognitionParams(maxSilenceDuration: Long = 1000L, maxDuration: Long = 30000L, sampleRate: Int = 16000, model: String?)` - Parameters for controlling speech recognition.
-- `SpeechRecognitionResult(success: Boolean, text: String? = null, eventSuccess: Boolean = true, processingTime: Double? = null)` - The result of a transcription.
-- `VoiceModel(created_at: String, slug: String, language: String, url: String, size_mb: Int, file_name: String, provider: String = "whisper", isDownloaded: Boolean = false)` - Contains information about an available voice model.
+- `CactusInitParams(model: String? = null, contextSize: Int? = null)` - Parameters for model initialization (shared with CactusLM).
+- `CactusTranscriptionParams(model: String? = null, maxTokens: Int = 512, stopSequences: List<String> = listOf("<|im_end|>", "<end_of_turn>"))` - Parameters for controlling speech transcription.
+- `CactusTranscriptionResult(success: Boolean, text: String? = null, totalTimeMs: Double? = null)` - The result of a transcription.
+- `VoiceModel(created_at: String, slug: String, download_url: String, size_mb: Int, quantization: Int, isDownloaded: Boolean = false)` - Contains information about an available voice model.
 - `TranscriptionMode` - Enum for transcription mode (`LOCAL`, `REMOTE`, `LOCAL_FIRST`, `REMOTE_FIRST`).
 
 ## Platform-Specific Setup

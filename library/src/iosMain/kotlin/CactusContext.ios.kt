@@ -165,6 +165,68 @@ actual object CactusContext {
         }
     }
 
+    actual suspend fun transcribe(
+        handle: Long,
+        audioFilePath: String,
+        prompt: String,
+        params: CactusTranscriptionParams,
+        onToken: CactusStreamingCallback?,
+        quantization: Int
+    ): CactusTranscriptionResult = withContext(Dispatchers.Default) {
+        val optionsJson = CactusPayloadBuilder.buildParamsJson(params)
+
+        return@withContext memScoped {
+            val bufferSize = max(params.maxTokens * quantization, 2048)
+            val responseBuffer = allocArray<ByteVar>(bufferSize)
+
+            // Set up streaming if callback is provided
+            val fullResponse = if (onToken != null) {
+                currentStreamingCallback = onToken
+                currentStreamingResponse = StringBuilder()
+                currentStreamingResponse
+            } else {
+                currentStreamingCallback = null
+                currentStreamingResponse = null
+                null
+            }
+
+            val callback = if (onToken != null) nativeTokenCallback else null
+
+            val result = cactus_transcribe(
+                handle.toCPointer(),
+                audioFilePath,
+                prompt,
+                responseBuffer,
+                bufferSize.convert(),
+                optionsJson,
+                callback,
+                null
+            )
+
+            // Clean up global state
+            currentStreamingCallback = null
+            currentStreamingResponse = null
+
+            if (result > 0) {
+                val responseText = responseBuffer.toKString()
+
+                try {
+                    CactusJsonParser.parseTranscriptionResult(responseText)
+                } catch (e: Exception) {
+                    CactusTranscriptionResult(
+                        success = false,
+                        errorMessage = "Error: Unable to parse the response. Exception: ${e.message}"
+                    )
+                }
+            } else {
+                CactusTranscriptionResult(
+                    success = false,
+                    errorMessage = "Error: completion failed with code $result"
+                )
+            }
+        }
+    }
+
     actual fun getBundleId(): String {
         return NSBundle.mainBundle.bundleIdentifier ?: "unknown"
     }

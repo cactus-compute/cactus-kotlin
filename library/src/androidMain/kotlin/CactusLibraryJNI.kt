@@ -17,6 +17,16 @@ internal object CactusLibrary {
         callback: ((String, Int) -> Unit)?,
         userData: Long
     ): Int
+    external fun cactus_transcribe(
+        model: Long,
+        audioPath: String,
+        prompt: String,
+        responseBuffer: ByteArray,
+        bufferSize: Int,
+        optionsJson: String?,
+        callback: ((String, Int) -> Unit)?,
+        userData: Long
+    ): Int
     external fun cactus_embed(
         model: Long,
         text: String,

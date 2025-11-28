@@ -155,4 +155,56 @@ actual object CactusContext {
 
     actual fun sha1(input: ByteArray): ByteArray =
         MessageDigest.getInstance("SHA-1").digest(input)
+
+    actual suspend fun transcribe(
+        handle: Long,
+        audioFilePath: String,
+        prompt: String,
+        params: CactusTranscriptionParams,
+        onToken: CactusStreamingCallback?,
+        quantization: Int
+    ): CactusTranscriptionResult = withContext(Dispatchers.Default) {
+        val optionsJson = CactusPayloadBuilder.buildParamsJson(params)
+        val bufferSize = max(params.maxTokens * quantization, 2048)
+
+        val responseBuffer = ByteArray(bufferSize)
+
+        // Create callback wrapper if onToken is provided
+        val callback: ((String, Int) -> Unit)? = if (onToken != null) {
+            { token, tokenId ->
+                onToken(token, tokenId.toUInt())
+            }
+        } else null
+
+        val result = lib.cactus_transcribe(
+            handle,
+            audioFilePath,
+            prompt,
+            responseBuffer,
+            bufferSize,
+            optionsJson,
+            callback,
+            0L // userData - not used in our implementation
+        )
+
+        Log.i("Cactus", "Received completion result code: $result")
+
+        if (result > 0) {
+            val responseText = String(responseBuffer).trim('\u0000')
+
+            return@withContext try {
+                CactusJsonParser.parseTranscriptionResult(responseText)
+            } catch (e: Exception) {
+                CactusTranscriptionResult(
+                    success = false,
+                    errorMessage = "Error: Unable to parse the response. Exception: ${e.message}"
+                )
+            }
+        } else {
+            return@withContext CactusTranscriptionResult(
+                success = false,
+                errorMessage = "Error: completion failed with code $result"
+            )
+        }
+    }
 }

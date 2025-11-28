@@ -16,15 +16,9 @@ add_library(cactus_util_prebuilt SHARED IMPORTED)
 set_target_properties(cactus_util_prebuilt PROPERTIES
     IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../commonMain/resources/android/libs/${ANDROID_ABI}/libcactus_util.so)
 
-# Import the pre-built whisper shared library
-add_library(whisper_prebuilt SHARED IMPORTED)
-set_target_properties(whisper_prebuilt PROPERTIES
-    IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/../../commonMain/resources/android/libs/${ANDROID_ABI}/libwhisper.so)
-
-# Create JNI wrapper for main cactus and whisper
+# Create JNI wrapper for main cactus
 add_library(cactus SHARED
     cactus_jni.cpp
-    whisper_jni.cpp
 )
 
 # Set compilation flags to match the static libraries
@@ -40,7 +34,6 @@ target_link_options(cactus PRIVATE -Wl,-z,max-page-size=16384)
 target_link_libraries(cactus
     cactus_static
     cactus_util_prebuilt
-    whisper_prebuilt
     android
     log
 )

@@ -22,11 +22,10 @@ import kotlinx.coroutines.withContext
 fun TranscriptionPage(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
     
-    var currentProvider by remember { mutableStateOf(TranscriptionProvider.WHISPER) }
-    var stt by remember { mutableStateOf(CactusSTT(currentProvider)) }
+    var stt by remember { mutableStateOf(CactusSTT()) }
     
     var voiceModels by remember { mutableStateOf<List<VoiceModel>>(emptyList()) }
-    var selectedModel by remember { mutableStateOf("tiny") }
+    var selectedModel by remember { mutableStateOf("whisper-medium") }
     
     var isModelLoaded by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
@@ -36,7 +35,8 @@ fun TranscriptionPage(onBack: () -> Unit) {
     var isUsingDefaultModel by remember { mutableStateOf(false) }
     var isPreparingFile by remember { mutableStateOf(false) }
     var outputText by remember { mutableStateOf("Ready to start. Select a model and initialize to begin.") }
-    var lastResponse by remember { mutableStateOf<SpeechRecognitionResult?>(null) }
+    var streamedText by remember { mutableStateOf("") }
+    var lastResponse by remember { mutableStateOf<CactusTranscriptionResult?>(null) }
     var downloadProgress by remember { mutableStateOf("") }
     var downloadPercentage by remember { mutableStateOf<Float?>(null) }
 
@@ -49,10 +49,11 @@ fun TranscriptionPage(onBack: () -> Unit) {
         isUsingDefaultModel = false
         isPreparingFile = false
         voiceModels = emptyList()
+        streamedText = ""
         lastResponse = null
         downloadProgress = ""
         downloadPercentage = null
-        selectedModel = "tiny"
+        selectedModel = "whisper-medium"
         outputText = "Ready to start. Select a model and initialize to begin."
     }
 
@@ -93,11 +94,15 @@ fun TranscriptionPage(onBack: () -> Unit) {
             downloadPercentage = null
             
             try {
-                val downloadSuccess = stt.download(
-                    model = selectedModel,
-                )
-                
-                if (!downloadSuccess) {
+                try {
+                    stt.downloadModel(
+                        model = selectedModel,
+                    )
+                    isDownloading = false
+                    downloadProgress = ""
+                    downloadPercentage = null
+                    outputText = "Model downloaded successfully! Initializing..."
+                } catch (e: Exception) {
                     isDownloading = false
                     isInitializing = false
                     downloadProgress = ""
@@ -106,19 +111,14 @@ fun TranscriptionPage(onBack: () -> Unit) {
                     return@launch
                 }
                 
-                isDownloading = false
-                downloadProgress = ""
-                downloadPercentage = null
-                outputText = "Model downloaded successfully! Initializing..."
-                
-                val initSuccess = stt.init(model = selectedModel)
-                isInitializing = false
-                
-                if (initSuccess) {
+                try {
+                    stt.initializeModel(CactusInitParams(model = selectedModel))
+                    isInitializing = false
                     isModelLoaded = true
                     outputText = "Model downloaded and initialized successfully! Ready to transcribe audio."
-                } else {
+                } catch (e: Exception) {
                     outputText = "Failed to initialize model."
+                    return@launch
                 }
             } catch (e: Exception) {
                 isDownloading = false
@@ -126,43 +126,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
                 downloadProgress = ""
                 downloadPercentage = null
                 outputText = "Error: ${e.message}"
-            }
-        }
-    }
-
-    fun transcribeFromMicrophone() {
-        if (!isModelLoaded) {
-            outputText = "Please initialize the model first."
-            return
-        }
-        
-        scope.launch {
-            try {
-                isTranscribing = true
-                outputText = "Listening for audio... Speak now!"
-                
-                val params = SpeechRecognitionParams(
-                    sampleRate = 16000,
-                    maxDuration = 30000, // 30 seconds
-                    maxSilenceDuration = 3000, // 3 seconds of silence
-                )
-                
-                val result = withContext(Dispatchers.Default) {
-                    stt.transcribe(params = params)
-                }
-                
-                isTranscribing = false
-                if (result != null && result.success) {
-                    lastResponse = result
-                    outputText = "Transcription completed successfully!"
-                } else {
-                    outputText = result?.text ?: "Failed to transcribe audio."
-                    lastResponse = null
-                }
-            } catch (e: Exception) {
-                isTranscribing = false
-                outputText = "Error during transcription: ${e.message}"
-                lastResponse = null
             }
         }
     }
@@ -175,32 +138,38 @@ fun TranscriptionPage(onBack: () -> Unit) {
                     try {
                         isPreparingFile = false
                         isTranscribing = true
-                        outputText = "Preparing audio file for transcription..."
+                        streamedText = ""
+                        lastResponse = null
                         outputText = "Transcribing audio file: ${selectedPath.substringAfterLast('/')}"
-                        
-                        val params = SpeechRecognitionParams(
-                            sampleRate = 16000,
-                            model = selectedModel
+
+                        val params = CactusTranscriptionParams(
+                            model = selectedModel,
+                            maxTokens = 512
                         )
-                        
+
                         val result = withContext(Dispatchers.Default) {
                             stt.transcribe(
+                                filePath = selectedPath,
                                 params = params,
-                                filePath = selectedPath
+                                onToken = { token, _ ->
+                                    streamedText += token
+                                }
                             )
                         }
-                        
+
                         isTranscribing = false
                         if (result != null && result.success) {
                             lastResponse = result
                             outputText = "File transcription completed successfully!"
                         } else {
                             outputText = result?.text ?: "Failed to transcribe audio file."
+                            streamedText = ""
                             lastResponse = null
                         }
                     } catch (e: Exception) {
                         isTranscribing = false
                         outputText = "Error during file transcription: ${e.message}"
+                        streamedText = ""
                         lastResponse = null
                     }
                 }
@@ -220,28 +189,8 @@ fun TranscriptionPage(onBack: () -> Unit) {
         }
     }
 
-    fun stopTranscription() {
-        scope.launch {
-            try {
-                outputText = "Transcribing..."
-                withContext(Dispatchers.Default) {
-                    stt.stop()
-                }
-                outputText = "Processing recorded audio..."
-            } catch (e: Exception) {
-                outputText = "Error stopping transcription: ${e.message}"
-            }
-        }
-    }
-
     LaunchedEffect(Unit) {
         loadVoiceModels()
-    }
-
-    DisposableEffect(Unit) {
-        onDispose {
-            stt.stop()
-        }
     }
 
     Scaffold(
@@ -281,54 +230,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
                         "This example demonstrates speech-to-text transcription using CactusSTT. Select a provider and model, initialize it, then you can transcribe from microphone input or from audio files.",
                         style = MaterialTheme.typography.bodyMedium
                     )
-                    
-                    HorizontalDivider()
-                    
-                    Text(
-                        "Provider Selection",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    
-                    var providerExpanded by remember { mutableStateOf(false) }
-                    ExposedDropdownMenuBox(
-                        expanded = providerExpanded,
-                        onExpandedChange = { 
-                            if (!isModelLoaded) providerExpanded = !providerExpanded 
-                        }
-                    ) {
-                        OutlinedTextField(
-                            value = when (currentProvider) {
-                                TranscriptionProvider.WHISPER -> "Whisper"
-                            },
-                            onValueChange = {},
-                            readOnly = true,
-                            enabled = !isModelLoaded,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = providerExpanded) },
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor()
-                        )
-                        
-                        ExposedDropdownMenu(
-                            expanded = providerExpanded,
-                            onDismissRequest = { providerExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Whisper") },
-                                onClick = {
-                                    if (currentProvider != TranscriptionProvider.WHISPER) {
-                                        currentProvider = TranscriptionProvider.WHISPER
-                                        resetState()
-                                        stt.stop()
-                                        stt = CactusSTT(currentProvider)
-                                        loadVoiceModels()
-                                    }
-                                    providerExpanded = false
-                                }
-                            )
-                        }
-                    }
                     
                     Box(
                         modifier = Modifier
@@ -405,8 +306,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
 
             Button(
                 onClick = { downloadAndInitializeModel() },
-                enabled = !isDownloading && !isInitializing && !isModelLoaded && 
-                         !isLoadingModels && (voiceModels.isNotEmpty() || isUsingDefaultModel),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (isDownloading || isInitializing) {
@@ -455,32 +354,6 @@ fun TranscriptionPage(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Button(
-                    onClick = { 
-                        if (isTranscribing) {
-                            stopTranscription()
-                        } else {
-                            transcribeFromMicrophone()
-                        }
-                    },
-                    enabled = !isDownloading && !isInitializing && isModelLoaded && !isLoadingModels,
-                    modifier = Modifier.weight(1f)
-                ) {
-                    if (isTranscribing) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(16.dp),
-                                strokeWidth = 2.dp,
-                            )
-                            Text("Stop")
-                        }
-                    } else {
-                        Text("Microphone")
-                    }
-                }
                 
                 Button(
                     onClick = { transcribeFromFile() },
@@ -502,18 +375,43 @@ fun TranscriptionPage(onBack: () -> Unit) {
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold
                     )
-                    
+
                     Text(outputText)
-                    
+
+                    // Show streamed text while transcribing
+                    if (isTranscribing && streamedText.isNotEmpty()) {
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                        Text(
+                            "Transcription (streaming):",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                        ) {
+                            Text(
+                                text = streamedText,
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(12.dp)
+                            )
+                        }
+                    }
+
+                    // Show final result with metrics
                     lastResponse?.let { response ->
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        
+
                         Text(
                             "Transcription Result:",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold
                         )
-                        
+
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             colors = CardDefaults.cardColors(
@@ -530,13 +428,65 @@ fun TranscriptionPage(onBack: () -> Unit) {
                                         style = MaterialTheme.typography.bodyLarge
                                     )
                                 }
-                                
-                                response.processingTime?.let { time ->
-                                    Text(
-                                        text = "Processing time: ${time.toInt()}ms",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+
+                                // Metrics section
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceAround
+                                ) {
+                                    // Model
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = "Model",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = selectedModel,
+                                            style = MaterialTheme.typography.bodySmall
+                                        )
+                                    }
+
+                                    // TTFT
+                                    response.timeToFirstTokenMs?.let { ttft ->
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text(
+                                                text = "TTFT",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "${ttft.toInt()} ms",
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
+
+                                    // Total Time
+                                    response.totalTimeMs?.let { total ->
+                                        Column(
+                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text(
+                                                text = "Total",
+                                                style = MaterialTheme.typography.labelMedium,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                text = "%.2f s".format(total / 1000.0),
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -2,97 +2,119 @@ package com.cactus
 
 import com.cactus.services.Supabase
 import com.cactus.services.Telemetry
+import utils.CactusLogger
 import kotlin.time.TimeSource
 
-class CactusSTT(
-    private val provider: TranscriptionProvider = TranscriptionProvider.WHISPER
-) {
-    private var isInitialized = false
+class CactusSTT() {
+    private var _handle: Long? = null
     private var _lastInitializedModel: String = "whisper-tiny"
     private val timeSource = TimeSource.Monotonic
     private val wisprFlow = WisprFlow()
-    private lateinit var speechProvider: SpeechRecognitionProvider
 
-    private var voiceModels = mutableMapOf<TranscriptionProvider, List<VoiceModel>>()
+    private var voiceModels = listOf<VoiceModel>()
 
-    suspend fun download(
-        model: String
-    ): Boolean {
-        val currentModel  = getModel(model) ?: return false
-        if (isModelDownloaded(model)) {
-            return true
+    suspend fun downloadModel(
+        model: String = _lastInitializedModel
+    ) {
+        if (modelExists(model)) {
+            return
         }
-        val tasks = mutableListOf<DownloadTask>()
 
-        // Check if model is whisper (provider field)
-        val isWhisper = currentModel.provider == "whisper"
-
-        if(!modelExists(currentModel.slug)) {
-            if (isWhisper) {
-                // Whisper models are .bin files, no extraction needed
-                tasks.add(DownloadTask(
-                    url = currentModel.url,
-                    filename = "${currentModel.slug}.bin",
-                    folder = currentModel.slug,
-                    requiresExtraction = false
-                ))
-            }
+        val currentModel  = getModel(model) ?: run {
+            throw Exception("Failed to get model $model")
         }
-        return downloadAndExtractModels(tasks)
+
+        val actualFilename = currentModel.download_url.split('?').first().split('/').last()
+        val task = DownloadTask(currentModel.download_url, actualFilename, currentModel.slug)
+
+        val success = downloadAndExtractModels(listOf(task))
+        if (!success) {
+            throw Exception("Failed to download and extract model $model from ${currentModel.download_url}")
+        }
     }
 
-    suspend fun init(model: String): Boolean {
-        isInitialized = false
-        if (!isModelDownloaded(model)) {
-            download(model)
+    suspend fun initializeModel(params: CactusInitParams) {
+        val modelFolder = params.model ?: _lastInitializedModel
+        val modelPath = getModelPath(modelFolder)
+
+        _handle = CactusContext.initContext(modelPath, (params.contextSize ?: 2048).toUInt())
+        _lastInitializedModel = modelFolder
+
+        // If initialization failed and model is not downloaded, try to download first
+        if (_handle == null && !modelExists(modelFolder)) {
+            CactusLogger.i("Failed to initialize model context with model at $modelPath, trying to download the model first.", tag = "CactusLM")
+            downloadModel(model = modelFolder)
+            return initializeModel(params)
         }
-        try {
-            // Initialize the speech provider based on the selected provider
-            speechProvider = getSpeechRecognitionProvider(provider)
-            isInitialized = speechProvider.initialize(model)
-            
-            if (Telemetry.isInitialized) {
-                val message = if (isInitialized) null else "Failed to initialize model: $model"
-                Telemetry.instance?.logInit(isInitialized, model, message)
-            }
-        } catch (e: Exception) {
-            if (Telemetry.isInitialized) {
-                Telemetry.instance?.logInit(isInitialized, model, "Error in initializing STT: ${e.message}")
-            }
+
+        if (Telemetry.isInitialized) {
+            val message = if (_handle != null) null else "Failed to initialize model at path: $modelPath"
+            Telemetry.instance?.logInit(_handle != null, modelFolder, message)
         }
-        _lastInitializedModel = model
-        return isInitialized
+
+        if (_handle == null) {
+            throw Exception("Failed to initialize model context with model at $modelPath")
+        }
+        _lastInitializedModel = modelFolder
     }
 
     suspend fun transcribe(
-        params: SpeechRecognitionParams = SpeechRecognitionParams(),
-        filePath: String? = null,
+        filePath: String,
+        prompt: String = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>",
+        params: CactusTranscriptionParams = CactusTranscriptionParams(),
+        onToken: CactusStreamingCallback? = null,
         mode: TranscriptionMode = TranscriptionMode.LOCAL,
         apiKey: String? = null
-    ): SpeechRecognitionResult? {
+    ): CactusTranscriptionResult? {
         val startTime = timeSource.markNow()
-        var result: SpeechRecognitionResult?
-        val model = params.model ?: _lastInitializedModel
+        var result: CactusTranscriptionResult?
 
-        val localTranscribe = suspend {
-            if (!isInitialized || model!= _lastInitializedModel) {
-                init(model)
+        val localTranscribe = suspend local@{
+            val model = params.model ?: _lastInitializedModel
+            val currentHandle = getValidatedHandle(model)
+            val quantization = Supabase.getModel(model)?.quantization ?: 8
+
+            if (currentHandle == null) {
+                if (Telemetry.isInitialized) {
+                    Telemetry.instance?.logTranscription(
+                        CactusTranscriptionResult(success = false),
+                        model,
+                        message = "Context not initialized",
+                        mode = mode
+                    )
+                }
+                return@local null
             }
-            if (isInitialized) {
-                speechProvider.performRecognition(params, filePath)
-            } else {
-                SpeechRecognitionResult(
-                    success = false,
-                    text = "Local STT not initialized."
+
+            try {
+                CactusContext.transcribe(
+                    currentHandle,
+                    filePath,
+                    prompt,
+                    params,
+                    onToken,
+                    quantization
                 )
+            } catch (e: Exception) {
+                if (Telemetry.isInitialized) {
+                    Telemetry.instance?.logCompletion(CactusCompletionResult(success = false), _lastInitializedModel, message = e.message)
+                }
+                throw e
             }
         }
 
         val remoteTranscribe = suspend {
-            if (filePath != null && apiKey != null) {
-                wisprFlow.transcribe(filePath, apiKey)
+            if (apiKey != null) {
+                val wisprResult = wisprFlow.transcribe(filePath, apiKey)
+                wisprResult?.let {
+                    CactusTranscriptionResult(
+                        it.success,
+                        it.text,
+                        totalTimeMs = it.processingTime
+                    )
+                }
             } else {
-                SpeechRecognitionResult(
+                CactusTranscriptionResult(
                     success = false,
                     text = "Remote transcription requires filePath and apiKey."
                 )
@@ -112,7 +134,7 @@ class CactusSTT(
                     val localError = result?.text
                     result = remoteTranscribe()
                     if (result?.success != true && localError != null) {
-                        result = SpeechRecognitionResult(
+                        result = CactusTranscriptionResult(
                             success = false,
                             text = "Local transcription failed: $localError. Remote transcription also failed: ${result?.text}"
                         )
@@ -125,7 +147,7 @@ class CactusSTT(
                     val remoteError = result?.text
                     result = localTranscribe()
                     if (result?.success != true && remoteError != null) {
-                        result = SpeechRecognitionResult(
+                        result = CactusTranscriptionResult(
                             success = false,
                             text = "Remote transcription failed: $remoteError. Local transcription also failed: ${result?.text}"
                         )
@@ -142,9 +164,9 @@ class CactusSTT(
 
         if (Telemetry.isInitialized) {
             Telemetry.instance?.logTranscription(
-                CactusCompletionResult(
-                    success = result?.eventSuccess == true,
-                    totalTimeMs = result?.processingTime
+                CactusTranscriptionResult(
+                    success = result?.success == true,
+                    totalTimeMs = result?.totalTimeMs
                 ),
                 _lastInitializedModel,
                 message = message,
@@ -160,26 +182,26 @@ class CactusSTT(
         wisprFlow.warmUp(apiKey)
     }
 
-    fun stop() {
-        if (isInitialized) {
-            speechProvider.stop()
-        }
-    }
+    fun isReady(): Boolean = _handle != null
 
-    fun isReady(): Boolean = isInitialized
-
-    suspend fun getVoiceModels(provider: TranscriptionProvider = this.provider): List<VoiceModel> {
-        return voiceModels[provider] ?: run {
-            val providerName = when (provider) {
-                TranscriptionProvider.WHISPER -> "whisper"
-            }
-            val newModels = Supabase.fetchVoiceModels(providerName)
+    suspend fun getVoiceModels(): List<VoiceModel> {
+        return voiceModels.ifEmpty {
+            val newModels = Supabase.fetchVoiceModels()
             newModels.onEach { model ->
                 model.isDownloaded = modelExists(model.slug)
             }
-            voiceModels[provider] = newModels
+            voiceModels = newModels
             newModels
         }
+    }
+
+    private suspend fun getValidatedHandle(model: String): Long? {
+        if (_handle != null && (model == _lastInitializedModel)) {
+            return _handle
+        }
+
+        initializeModel(CactusInitParams(model = model))
+        return _handle
     }
 
     suspend fun isModelDownloaded(
@@ -190,7 +212,7 @@ class CactusSTT(
     }
 
     private suspend fun getModel(slug: String): VoiceModel? {
-        val modelsForProvider = getVoiceModels(provider)
+        val modelsForProvider = getVoiceModels()
         return modelsForProvider.firstOrNull { it.slug == slug }
     }
 }

@@ -154,6 +154,55 @@ Java_com_cactus_CactusLibrary_cactus_1destroy(JNIEnv *env, jclass clazz, jlong m
     cactus_destroy(reinterpret_cast<cactus_model_t>(model));
 }
 
+JNIEXPORT jint JNICALL
+Java_com_cactus_CactusLibrary_cactus_1transcribe(JNIEnv *env, jclass clazz, jlong model,
+        jstring audio_file_path, jstring whisper_prompt, jbyteArray response_buffer,
+        jint buffer_size, jstring options_json, jobject callback, jlong user_data) {
+
+    const char *audioPath = env->GetStringUTFChars(audio_file_path, nullptr);
+    const char *prompt = env->GetStringUTFChars(whisper_prompt, nullptr);
+    const char *options = options_json ? env->GetStringUTFChars(options_json, 0) : nullptr;
+
+    jbyte *buffer = env->GetByteArrayElements(response_buffer, 0);
+
+    // Set up callback if provided
+    CallbackData callback_data = {nullptr, nullptr, nullptr};
+    cactus_token_callback native_callback = nullptr;
+    void* native_user_data = nullptr;
+
+    if (callback != nullptr) {
+        // Find the invoke method for the Kotlin function type (Function2)
+        jclass callback_class = env->GetObjectClass(callback);
+        jmethodID invoke_method = env->GetMethodID(callback_class, "invoke", "(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;");
+
+        if (invoke_method != nullptr) {
+            callback_data.env = env;
+            callback_data.callback = env->NewGlobalRef(callback);
+            callback_data.invoke_method = invoke_method;
+            native_callback = token_callback_bridge;
+            native_user_data = &callback_data;
+        }
+
+        env->DeleteLocalRef(callback_class);
+    }
+
+    int result = cactus_transcribe(reinterpret_cast<cactus_model_t>(model), audioPath,
+             prompt, reinterpret_cast<char*>(buffer), buffer_size, options,
+             native_callback, native_user_data);
+
+    // Clean up global reference if we created one
+    if (callback_data.callback != nullptr) {
+        env->DeleteGlobalRef(callback_data.callback);
+    }
+
+    env->ReleaseByteArrayElements(response_buffer, buffer, 0);
+    env->ReleaseStringUTFChars(audio_file_path, audioPath);
+    env->ReleaseStringUTFChars(whisper_prompt, prompt);
+    if (options) env->ReleaseStringUTFChars(options_json, options);
+
+    return result;
+}
+
 // Utility JNI functions for device management
 JNIEXPORT jstring JNICALL
 Java_com_cactus_utils_DeviceInfo_1androidKt_nativeRegisterApp(JNIEnv *env, jclass clazz, jstring encrypted_payload) {
