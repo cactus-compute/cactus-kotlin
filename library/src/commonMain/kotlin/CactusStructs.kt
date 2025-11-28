@@ -83,11 +83,9 @@ data class CactusModel(
 data class VoiceModel(
     val created_at: String,
     val slug: String,
-    val language: String,
-    val url: String,
+    val download_url: String,
     val size_mb: Int,
     val file_name: String,
-    val provider: String = "whisper",
     var isDownloaded: Boolean = false
 )
 

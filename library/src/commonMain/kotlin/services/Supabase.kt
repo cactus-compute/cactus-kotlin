@@ -9,7 +9,6 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.datetime.Instant
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import com.cactus.BuildConfig
@@ -170,16 +169,13 @@ object Supabase {
         }
     }
 
-    suspend fun fetchVoiceModels(provider: String? = null): List<VoiceModel> {
+    suspend fun fetchVoiceModels(): List<VoiceModel> {
         return try {
-            val response = client.get("$SUPABASE_URL/rest/v1/voice_models") {
+            val response = client.get("$SUPABASE_URL/rest/v1/whisper") {
                 header("apikey", SUPABASE_KEY)
                 header("Authorization", "Bearer $SUPABASE_KEY")
                 header("Accept-Profile", "cactus")
                 parameter("select", "*")
-                if (provider != null) {
-                    parameter("provider", "eq.$provider")
-                }
             }
 
             if (response.status == HttpStatusCode.OK) {

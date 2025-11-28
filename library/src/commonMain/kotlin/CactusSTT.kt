@@ -1,6 +1,5 @@
 package com.cactus
 
-import com.cactus.models.toToolsJson
 import com.cactus.services.Supabase
 import com.cactus.services.Telemetry
 import utils.CactusLogger
@@ -21,7 +20,7 @@ class CactusSTT() {
             return
         }
 
-        val currentModel  = Supabase.getModel(model) ?: run {
+        val currentModel  = getModel(model) ?: run {
             throw Exception("Failed to get model $model")
         }
 
