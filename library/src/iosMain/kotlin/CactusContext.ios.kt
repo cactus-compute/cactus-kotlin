@@ -171,12 +171,32 @@ actual object CactusContext {
 
     actual suspend fun transcribe(
         handle: Long,
-        audioFilePath: String,
+        audioFilePath: String?,
         prompt: String,
         params: CactusTranscriptionParams,
         onToken: CactusStreamingCallback?,
-        quantization: Int
+        quantization: Int,
+        audioBuffer: ByteArray?
     ): CactusTranscriptionResult = withContext(Dispatchers.Default) {
+        // Validate input: must have either file path or audio buffer
+        if (audioFilePath == null && (audioBuffer == null || audioBuffer.isEmpty())) {
+            CactusLogger.e("CactusContext", "Transcription error: No audio source provided")
+            return@withContext CactusTranscriptionResult(
+                success = false,
+                errorMessage = "Error: No audio source provided"
+            )
+        }
+
+        // Validate audio buffer format if provided
+        if (audioBuffer != null && audioBuffer.isNotEmpty()) {
+            if (audioBuffer.size < 32000) {
+                CactusLogger.w("CactusContext", "Audio buffer seems very small: ${audioBuffer.size} bytes")
+            }
+            if (audioBuffer.size % 2 != 0) {
+                CactusLogger.w("CactusContext", "Audio buffer size is odd, should be even for 16-bit samples")
+            }
+        }
+
         val optionsJson = CactusPayloadBuilder.buildParamsJson(params)
 
         return@withContext memScoped {
@@ -196,16 +216,42 @@ actual object CactusContext {
 
             val callback = if (onToken != null) nativeTokenCallback else null
 
-            val result = cactus_transcribe(
-                handle.toCPointer(),
-                audioFilePath,
-                prompt,
-                responseBuffer,
-                bufferSize.convert(),
-                optionsJson,
-                callback,
-                null
-            )
+            // Log transcription mode
+            val mode = if (audioBuffer != null) "BUFFER" else "FILE"
+            CactusLogger.d("CactusContext", "Transcription mode: $mode")
+
+            // Handle audio buffer if provided
+            // Pass null for file path when using buffer mode (matching Flutter implementation)
+            val result = if (audioBuffer != null) {
+                audioBuffer.usePinned { pinnedBuffer ->
+                    cactus_transcribe(
+                        handle.toCPointer(),
+                        null, // nullptr for file path when using buffer
+                        prompt,
+                        responseBuffer,
+                        bufferSize.convert(),
+                        optionsJson,
+                        callback,
+                        null,
+                        pinnedBuffer.addressOf(0).reinterpret(),
+                        audioBuffer.size.convert()
+                    )
+                }
+            } else {
+                // File mode - audioFilePath is guaranteed non-null here due to validation above
+                cactus_transcribe(
+                    handle.toCPointer(),
+                    audioFilePath!!,
+                    prompt,
+                    responseBuffer,
+                    bufferSize.convert(),
+                    optionsJson,
+                    callback,
+                    null,
+                    null,
+                    0.convert()
+                )
+            }
 
             // Clean up global state
             currentStreamingCallback = null

@@ -21,11 +21,12 @@ expect object CactusContext {
 
     suspend fun transcribe(
         handle: Long,
-        audioFilePath: String,
+        audioFilePath: String?,
         prompt: String,
         params: CactusTranscriptionParams,
         onToken: CactusStreamingCallback? = null,
-        quantization: Int
+        quantization: Int,
+        audioBuffer: ByteArray? = null
     ): CactusTranscriptionResult
 
     fun resetContext(handle: Long)
