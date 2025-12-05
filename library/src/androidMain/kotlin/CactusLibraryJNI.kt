@@ -34,5 +34,6 @@ internal object CactusLibrary {
         bufferSize: Int,
         embeddingDimPtr: IntArray
     ): Int
+    external fun cactus_reset(model: Long)
     external fun cactus_destroy(model: Long)
 }

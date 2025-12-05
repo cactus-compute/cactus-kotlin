@@ -27,4 +27,6 @@ expect object CactusContext {
         onToken: CactusStreamingCallback? = null,
         quantization: Int
     ): CactusTranscriptionResult
+
+    fun resetContext(handle: Long)
 }

@@ -40,6 +40,10 @@ actual object CactusContext {
         cactus_destroy(handle.toCPointer())
     }
 
+    actual fun resetContext(handle: Long) {
+        cactus_reset(handle.toCPointer())
+    }
+
     actual suspend fun completion(
         handle: Long,
         messages: List<ChatMessage>,

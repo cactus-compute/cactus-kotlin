@@ -184,6 +184,12 @@ class CactusSTT() {
 
     fun isReady(): Boolean = _handle != null
 
+    fun reset() {
+        _handle?.let { handle ->
+            CactusContext.resetContext(handle)
+        }
+    }
+
     suspend fun getVoiceModels(): List<VoiceModel> {
         return voiceModels.ifEmpty {
             val newModels = Supabase.fetchVoiceModels()

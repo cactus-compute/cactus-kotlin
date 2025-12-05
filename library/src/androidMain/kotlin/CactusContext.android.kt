@@ -38,6 +38,15 @@ actual object CactusContext {
             Log.e("Cactus", "Error destroying context: ${e.message}")
         }
     }
+
+    actual fun resetContext(handle: Long) {
+        try {
+            lib.cactus_reset(handle)
+            Log.d("Cactus", "Context reset")
+        } catch (e: Exception) {
+            Log.e("Cactus", "Error resetting context: ${e.message}")
+        }
+    }
     
     actual suspend fun completion(
         handle: Long, 

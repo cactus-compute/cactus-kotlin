@@ -148,9 +148,16 @@ Java_com_cactus_CactusLibrary_cactus_1embed(JNIEnv *env, jclass clazz, jlong mod
 }
 
 JNIEXPORT void JNICALL
+Java_com_cactus_CactusLibrary_cactus_1reset(JNIEnv *env, jclass clazz, jlong model) {
+    LOGI("Resetting cactus model");
+
+    cactus_reset(reinterpret_cast<cactus_model_t>(model));
+}
+
+JNIEXPORT void JNICALL
 Java_com_cactus_CactusLibrary_cactus_1destroy(JNIEnv *env, jclass clazz, jlong model) {
     LOGI("Destroying cactus model");
-    
+
     cactus_destroy(reinterpret_cast<cactus_model_t>(model));
 }
 
