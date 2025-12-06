@@ -5,6 +5,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,6 +15,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.cactus.*
 import com.cactus.example.rememberFilePickerLauncher
+import com.cactus.example.rememberAudioRecorder
+import utils.PCMUtils
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -25,7 +29,7 @@ fun TranscriptionPage(onBack: () -> Unit) {
     var stt by remember { mutableStateOf(CactusSTT()) }
     
     var voiceModels by remember { mutableStateOf<List<VoiceModel>>(emptyList()) }
-    var selectedModel by remember { mutableStateOf("whisper-medium") }
+    var selectedModel by remember { mutableStateOf("whisper-small") }
     
     var isModelLoaded by remember { mutableStateOf(false) }
     var isDownloading by remember { mutableStateOf(false) }
@@ -40,6 +44,10 @@ fun TranscriptionPage(onBack: () -> Unit) {
     var downloadProgress by remember { mutableStateOf("") }
     var downloadPercentage by remember { mutableStateOf<Float?>(null) }
 
+    // Audio recording state
+    val audioRecorder = rememberAudioRecorder()
+    var isRecordingMic by remember { mutableStateOf(false) }
+
     fun resetState() {
         isModelLoaded = false
         isDownloading = false
@@ -53,7 +61,7 @@ fun TranscriptionPage(onBack: () -> Unit) {
         lastResponse = null
         downloadProgress = ""
         downloadPercentage = null
-        selectedModel = "whisper-medium"
+        selectedModel = "whisper-small"
         outputText = "Ready to start. Select a model and initialize to begin."
     }
 
@@ -189,8 +197,81 @@ fun TranscriptionPage(onBack: () -> Unit) {
         }
     }
 
+    fun toggleMicRecording() {
+        if (isRecordingMic) {
+            // Stop recording and transcribe
+            scope.launch {
+                try {
+                    outputText = "Stopping recording and transcribing..."
+                    isTranscribing = true
+                    isRecordingMic = false
+
+                    val audioData = audioRecorder.stopRecording()
+
+                    if (audioData != null && audioData.isNotEmpty()) {
+                        streamedText = ""
+                        lastResponse = null
+
+                        val params = CactusTranscriptionParams(
+                            model = selectedModel,
+                            maxTokens = 512
+                        )
+
+                        val result = withContext(Dispatchers.Default) {
+                            stt.transcribe(
+                                audioBuffer = audioData,
+                                params = params,
+                                onToken = { token, _ ->
+                                    streamedText += token
+                                }
+                            )
+                        }
+
+                        isTranscribing = false
+                        if (result != null && result.success) {
+                            lastResponse = result
+                            outputText = "Mic transcription completed successfully!"
+                        } else {
+                            outputText = result?.text ?: "Failed to transcribe recorded audio."
+                            streamedText = ""
+                            lastResponse = null
+                        }
+                    } else {
+                        isTranscribing = false
+                        outputText = "No audio data recorded."
+                    }
+                } catch (e: Exception) {
+                    isRecordingMic = false
+                    isTranscribing = false
+                    outputText = "Error during mic transcription: ${e.message}"
+                    streamedText = ""
+                    lastResponse = null
+                }
+            }
+        } else {
+            // Start recording
+            isRecordingMic = true
+            streamedText = ""
+            lastResponse = null
+            outputText = "Recording... Tap Stop to transcribe"
+
+            audioRecorder.startRecording(
+                onError = { error ->
+                    isRecordingMic = false
+                    outputText = "Recording error: $error"
+                }
+            )
+        }
+    }
+
     LaunchedEffect(Unit) {
         loadVoiceModels()
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            audioRecorder.release()
+        }
     }
 
     Scaffold(
@@ -237,7 +318,7 @@ fun TranscriptionPage(onBack: () -> Unit) {
                             .height(4.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        if (isDownloading || isInitializing || isTranscribing || isLoadingModels) {
+                        if (isDownloading || isInitializing || isTranscribing || isLoadingModels || isRecordingMic) {
                             LinearProgressIndicator(
                                 progress = { downloadPercentage ?: 0f },
                                 modifier = Modifier.fillMaxWidth(),
@@ -342,7 +423,7 @@ fun TranscriptionPage(onBack: () -> Unit) {
                             modifier = Modifier.fillMaxSize(),
                         )
                     }
-                    isTranscribing || isPreparingFile -> {
+                    isTranscribing || isPreparingFile || isRecordingMic -> {
                         LinearProgressIndicator(
                             modifier = Modifier.fillMaxSize(),
                         )
@@ -354,10 +435,31 @@ fun TranscriptionPage(onBack: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                
+                Button(
+                    onClick = { toggleMicRecording() },
+                    modifier = Modifier.weight(1f),
+                    enabled = isModelLoaded && !isTranscribing && !isPreparingFile,
+                    colors = if (isRecordingMic) {
+                        ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error
+                        )
+                    } else {
+                        ButtonDefaults.buttonColors()
+                    }
+                ) {
+                    Icon(
+                        imageVector = if (isRecordingMic) Icons.Default.Stop else Icons.Default.Mic,
+                        contentDescription = if (isRecordingMic) "Stop Recording" else "Start Recording",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(if (isRecordingMic) "Stop" else "Mic")
+                }
+
                 Button(
                     onClick = { transcribeFromFile() },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                    enabled = isModelLoaded && !isTranscribing && !isRecordingMic
                 ) {
                     Text("File")
                 }
@@ -482,7 +584,7 @@ fun TranscriptionPage(onBack: () -> Unit) {
                                                 fontWeight = FontWeight.Bold
                                             )
                                             Text(
-                                                text = "%.2f s".format(total / 1000.0),
+                                                text = "${(total / 10.0).toInt() / 100.0} s",
                                                 style = MaterialTheme.typography.bodySmall
                                             )
                                         }
