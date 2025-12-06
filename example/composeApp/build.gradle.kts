@@ -29,12 +29,11 @@ kotlin {
     }
 
     sourceSets {
-                androidMain.dependencies {
+        androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
             implementation("androidx.compose.ui:ui-tooling-preview:1.5.4")
             implementation(libs.ktor.client.okhttp)
-
         }
         iosMain.dependencies {
             implementation(libs.ktor.client.darwin)
@@ -47,7 +46,7 @@ kotlin {
             implementation(compose.components.resources)
             implementation(compose.components.uiToolingPreview)
             implementation(compose.materialIconsExtended)
-            implementation("com.cactuscompute:cactus:1.2.0-beta")
+            implementation("com.cactuscompute:cactus:1.2.1-beta")
             implementation(libs.ktor.client.core)
         }
     }
