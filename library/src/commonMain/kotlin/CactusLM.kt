@@ -101,6 +101,7 @@ class CactusLM(
             try {
                 val toolsJson = filteredParams.tools.toToolsJson()
                 if(filteredParams.tools.isNotEmpty()) {
+                    reset()
                     getValidatedHandle(model)?.let {
                         CactusContext.completion(it, messages, filteredParams, toolsJson, onToken, quantization)
                     }
