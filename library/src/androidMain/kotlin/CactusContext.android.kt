@@ -38,6 +38,15 @@ actual object CactusContext {
             Log.e("Cactus", "Error destroying context: ${e.message}")
         }
     }
+
+    actual fun resetContext(handle: Long) {
+        try {
+            lib.cactus_reset(handle)
+            Log.d("Cactus", "Context reset")
+        } catch (e: Exception) {
+            Log.e("Cactus", "Error resetting context: ${e.message}")
+        }
+    }
     
     actual suspend fun completion(
         handle: Long, 
@@ -158,12 +167,30 @@ actual object CactusContext {
 
     actual suspend fun transcribe(
         handle: Long,
-        audioFilePath: String,
+        audioFilePath: String?,
         prompt: String,
         params: CactusTranscriptionParams,
         onToken: CactusStreamingCallback?,
-        quantization: Int
+        quantization: Int,
+        audioBuffer: ByteArray?
     ): CactusTranscriptionResult = withContext(Dispatchers.Default) {
+        if (audioFilePath == null && (audioBuffer == null || audioBuffer.isEmpty())) {
+            Log.e("Cactus", "Transcription error: No audio source provided (both filePath and audioBuffer are empty)")
+            return@withContext CactusTranscriptionResult(
+                success = false,
+                errorMessage = "Error: No audio source provided"
+            )
+        }
+
+        if (audioBuffer != null && audioBuffer.isNotEmpty()) {
+            if (audioBuffer.size < 32000) { // At least 1 second of 16kHz 16-bit mono audio
+                Log.w("Cactus", "Audio buffer seems very small: ${audioBuffer.size} bytes (${audioBuffer.size / 32000.0} seconds at 16kHz)")
+            }
+            if (audioBuffer.size % 2 != 0) {
+                Log.w("Cactus", "Audio buffer size is odd, should be even for 16-bit samples")
+            }
+        }
+
         val optionsJson = CactusPayloadBuilder.buildParamsJson(params)
         val bufferSize = max(params.maxTokens * quantization, 2048)
 
@@ -184,10 +211,11 @@ actual object CactusContext {
             bufferSize,
             optionsJson,
             callback,
-            0L // userData - not used in our implementation
+            0L, // userData - not used in our implementation
+            audioBuffer
         )
 
-        Log.i("Cactus", "Received completion result code: $result")
+        Log.i("Cactus", "Received transcription result code: $result")
 
         if (result > 0) {
             val responseText = String(responseBuffer).trim('\u0000')

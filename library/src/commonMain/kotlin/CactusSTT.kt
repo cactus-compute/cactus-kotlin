@@ -59,12 +59,13 @@ class CactusSTT() {
     }
 
     suspend fun transcribe(
-        filePath: String,
+        filePath: String? = null,
         prompt: String = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>",
         params: CactusTranscriptionParams = CactusTranscriptionParams(),
         onToken: CactusStreamingCallback? = null,
         mode: TranscriptionMode = TranscriptionMode.LOCAL,
-        apiKey: String? = null
+        apiKey: String? = null,
+        audioBuffer: ByteArray? = null
     ): CactusTranscriptionResult? {
         val startTime = timeSource.markNow()
         var result: CactusTranscriptionResult?
@@ -93,7 +94,8 @@ class CactusSTT() {
                     prompt,
                     params,
                     onToken,
-                    quantization
+                    quantization,
+                    audioBuffer
                 )
             } catch (e: Exception) {
                 if (Telemetry.isInitialized) {
@@ -105,7 +107,7 @@ class CactusSTT() {
 
         val remoteTranscribe = suspend {
             if (apiKey != null) {
-                val wisprResult = wisprFlow.transcribe(filePath, apiKey)
+                val wisprResult = wisprFlow.transcribe(filePath!!, apiKey)
                 wisprResult?.let {
                     CactusTranscriptionResult(
                         it.success,
@@ -183,6 +185,12 @@ class CactusSTT() {
     }
 
     fun isReady(): Boolean = _handle != null
+
+    fun reset() {
+        _handle?.let { handle ->
+            CactusContext.resetContext(handle)
+        }
+    }
 
     suspend fun getVoiceModels(): List<VoiceModel> {
         return voiceModels.ifEmpty {

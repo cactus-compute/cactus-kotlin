@@ -148,18 +148,36 @@ Java_com_cactus_CactusLibrary_cactus_1embed(JNIEnv *env, jclass clazz, jlong mod
 }
 
 JNIEXPORT void JNICALL
+Java_com_cactus_CactusLibrary_cactus_1reset(JNIEnv *env, jclass clazz, jlong model) {
+    LOGI("Resetting cactus model");
+
+    cactus_reset(reinterpret_cast<cactus_model_t>(model));
+}
+
+JNIEXPORT void JNICALL
 Java_com_cactus_CactusLibrary_cactus_1destroy(JNIEnv *env, jclass clazz, jlong model) {
     LOGI("Destroying cactus model");
-    
+
     cactus_destroy(reinterpret_cast<cactus_model_t>(model));
 }
 
 JNIEXPORT jint JNICALL
 Java_com_cactus_CactusLibrary_cactus_1transcribe(JNIEnv *env, jclass clazz, jlong model,
         jstring audio_file_path, jstring whisper_prompt, jbyteArray response_buffer,
-        jint buffer_size, jstring options_json, jobject callback, jlong user_data) {
+        jint buffer_size, jstring options_json, jobject callback, jlong user_data, jbyteArray pcm_buffer) {
 
-    const char *audioPath = env->GetStringUTFChars(audio_file_path, nullptr);
+    // Handle audio path - pass nullptr if empty (for buffer mode)
+    const char *audioPath = nullptr;
+    if (audio_file_path != nullptr) {
+        const char *tempPath = env->GetStringUTFChars(audio_file_path, nullptr);
+        // Only use the path if it's not empty
+        if (tempPath != nullptr && strlen(tempPath) > 0) {
+            audioPath = tempPath;
+        } else if (tempPath != nullptr) {
+            env->ReleaseStringUTFChars(audio_file_path, tempPath);
+        }
+    }
+
     const char *prompt = env->GetStringUTFChars(whisper_prompt, nullptr);
     const char *options = options_json ? env->GetStringUTFChars(options_json, 0) : nullptr;
 
@@ -186,17 +204,34 @@ Java_com_cactus_CactusLibrary_cactus_1transcribe(JNIEnv *env, jclass clazz, jlon
         env->DeleteLocalRef(callback_class);
     }
 
+    // Handle PCM buffer if provided
+    jbyte *pcm_buffer_ptr = nullptr;
+    jsize pcm_buffer_size = 0;
+
+    if (pcm_buffer != nullptr) {
+        pcm_buffer_ptr = env->GetByteArrayElements(pcm_buffer, 0);
+        pcm_buffer_size = env->GetArrayLength(pcm_buffer);
+    }
+
     int result = cactus_transcribe(reinterpret_cast<cactus_model_t>(model), audioPath,
              prompt, reinterpret_cast<char*>(buffer), buffer_size, options,
-             native_callback, native_user_data);
+             native_callback, native_user_data,
+             reinterpret_cast<const uint8_t*>(pcm_buffer_ptr), static_cast<size_t>(pcm_buffer_size));
 
     // Clean up global reference if we created one
     if (callback_data.callback != nullptr) {
         env->DeleteGlobalRef(callback_data.callback);
     }
 
+    // Clean up PCM buffer if we used it
+    if (pcm_buffer_ptr != nullptr) {
+        env->ReleaseByteArrayElements(pcm_buffer, pcm_buffer_ptr, JNI_ABORT);
+    }
+
     env->ReleaseByteArrayElements(response_buffer, buffer, 0);
-    env->ReleaseStringUTFChars(audio_file_path, audioPath);
+    if (audioPath != nullptr) {
+        env->ReleaseStringUTFChars(audio_file_path, audioPath);
+    }
     env->ReleaseStringUTFChars(whisper_prompt, prompt);
     if (options) env->ReleaseStringUTFChars(options_json, options);
 
