@@ -256,6 +256,7 @@ fun TranscriptionPage(onBack: () -> Unit) {
             outputText = "Recording... Tap Stop to transcribe"
 
             audioRecorder.startRecording(
+                onAudioData = {},
                 onError = { error ->
                     isRecordingMic = false
                     outputText = "Recording error: $error"
