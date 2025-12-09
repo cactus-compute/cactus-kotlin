@@ -261,6 +261,7 @@ val result = lm.generateCompletion(
 - `suspend fun generateCompletion(messages: List<ChatMessage>, params: CactusCompletionParams = CactusCompletionParams(), onToken: CactusStreamingCallback? = null): CactusCompletionResult?` - Generate text completion. Supports streaming via the `onToken` callback and different inference modes (local, remote, and fallbacks).
 - `suspend fun generateEmbedding(text: String, modelName: String? = null): CactusEmbeddingResult?` - Generate embeddings for the given text.
 - `suspend fun getModels(): List<CactusModel>` - Get a list of available models. Results are cached locally to reduce network requests.
+- `fun reset()` - Reset the model context, clearing conversation history and state without unloading the model. Useful for starting fresh conversations or clearing accumulated context.
 - `fun unload()` - Unload the current model and free resources.
 - `fun isLoaded(): Boolean` - Check if a model is currently loaded.
 
@@ -614,8 +615,9 @@ stt.isModelDownloaded("whisper-tiny")
 - `CactusSTT()` - Constructor for the STT service.
 - `suspend fun downloadModel(model: String = "whisper-tiny")` - Download an STT model (e.g., "whisper-tiny" or "whisper-base"). Defaults to last initialized model. Throws exception on failure.
 - `suspend fun initializeModel(params: CactusInitParams)` - Initialize an STT model for transcription using the model specified in params. Throws exception on failure.
-- `suspend fun transcribe(filePath: String, prompt: String = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>", params: CactusTranscriptionParams = CactusTranscriptionParams(), onToken: CactusStreamingCallback? = null, mode: TranscriptionMode = TranscriptionMode.LOCAL, apiKey: String? = null): CactusTranscriptionResult?` - Transcribe speech from an audio file. Supports streaming via the `onToken` callback and different transcription modes (local, remote, and fallbacks).
+- `suspend fun transcribe(filePath: String? = null, prompt: String = "<|startoftranscript|><|en|><|transcribe|><|notimestamps|>", params: CactusTranscriptionParams = CactusTranscriptionParams(), onToken: CactusStreamingCallback? = null, mode: TranscriptionMode = TranscriptionMode.LOCAL, apiKey: String? = null, audioBuffer: ByteArray? = null): CactusTranscriptionResult?` - Transcribe speech from an audio file or audio buffer. Use `filePath` for file-based transcription or `audioBuffer` for stream-based transcription (e.g., from microphone). Audio buffer must be 16-bit PCM, 16kHz, mono, minimum 32,000 bytes. Supports streaming via the `onToken` callback and different transcription modes (local, remote, and fallbacks).
 - `suspend fun warmUpWispr(apiKey: String)` - Warms up the remote Wispr service for lower latency.
+- `fun reset()` - Reset the model context, clearing accumulated state without unloading the model. Useful for starting fresh transcriptions.
 - `fun isReady(): Boolean` - Check if the STT service is initialized and ready.
 - `suspend fun getVoiceModels(): List<VoiceModel>` - Get a list of available voice models. Results are cached locally to reduce network requests.
 - `suspend fun isModelDownloaded(modelName: String = "whisper-tiny"): Boolean` - Check if a specific model has been downloaded. Defaults to last initialized model.
