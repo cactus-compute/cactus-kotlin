@@ -25,10 +25,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.cactus.services.CactusTelemetry
+import com.cactus.services.CactusConfig
 import com.cactus.example.theme.AppTheme
 import com.cactus.example.pages.BasicCompletionPage
 import com.cactus.example.pages.ChatPage
+import com.cactus.example.pages.ContextTestPage
 import com.cactus.example.pages.EmbeddingPage
 import com.cactus.example.pages.FetchModelsPage
 import com.cactus.example.pages.FunctionCallingPage
@@ -47,10 +48,11 @@ data class ExampleItem(
 @Composable
 fun App() {
     var currentPage by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
-    
+
     // Set telemetry token
     LaunchedEffect(Unit) {
-        CactusTelemetry.setTelemetryToken("a83c7f7a-43ad-4823-b012-cbeb587ae788")
+        CactusConfig.setTelemetryToken("a83c7f7a-43ad-4823-b012-cbeb587ae788")
+        CactusConfig.setProKey("f9510cdc-38ff-421e-ab8f-f2e6fc2cb8c5")
     }
 
     val examples = listOf(
@@ -70,6 +72,10 @@ fun App() {
             title = "Hybrid Completion",
             description = "Cloud fallback functionality"
         ) { HybridCompletionPage { currentPage = null } },
+        ExampleItem(
+            title = "4K Context Test",
+            description = "Test 4K context window with performance metrics"
+        ) { ContextTestPage { currentPage = null } },
         ExampleItem(
             title = "Fetch Models",
             description = "Model discovery and management"
