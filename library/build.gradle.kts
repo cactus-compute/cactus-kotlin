@@ -69,7 +69,7 @@ kotlin {
                     includeDirs(headerPath)
 
                     compilerOpts("-framework", "Accelerate", "-framework", "Foundation",
-                        "-framework", "Metal", "-framework", "MetalKit")
+                        "-framework", "Metal", "-framework", "MetalKit", "-framework", "CoreML")
                     
                     compilerOpts("-L${libraryPath.absolutePath}", "-lcactus")
                     extraOpts("-libraryPath", libraryPath.absolutePath)
@@ -91,8 +91,8 @@ kotlin {
                     
                     includeDirs(headerPath)
 
-                    compilerOpts("-framework", "Foundation", "-framework", "Accelerate", 
-                        "-framework", "Metal", "-framework", "MetalKit")
+                    compilerOpts("-framework", "Foundation", "-framework", "Accelerate",
+                        "-framework", "Metal", "-framework", "MetalKit", "-framework", "CoreML")
                     
                     compilerOpts("-L${libraryPath.absolutePath}", "-lcactus_util")
                     extraOpts("-libraryPath", libraryPath.absolutePath)
