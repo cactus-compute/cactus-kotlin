@@ -13,6 +13,10 @@ class CactusSTT() {
 
     private var voiceModels = listOf<VoiceModel>()
 
+    init {
+        ensureCactusInitialized()
+    }
+
     suspend fun downloadModel(
         model: String = _lastInitializedModel
     ) {

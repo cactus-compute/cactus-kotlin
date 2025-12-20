@@ -23,3 +23,5 @@ actual fun getModelPath(modelFolder: String): String {
     val appDocDir = File(applicationContext.filesDir, "models")
     return File(appDocDir, modelFolder).absolutePath
 }
+
+actual fun ensureCactusInitialized() {}

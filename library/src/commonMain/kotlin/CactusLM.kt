@@ -21,6 +21,10 @@ class CactusLM(
     private val _models = mutableListOf<CactusModel>()
     private var _toolFilterService: ToolFilterService? = null
 
+    init {
+        ensureCactusInitialized()
+    }
+
     suspend fun downloadModel(
         model: String = _lastInitializedModel
     ) {
@@ -252,3 +256,4 @@ class CactusLM(
 }
 
 expect fun getModelPath(modelFolder: String): String
+expect fun ensureCactusInitialized()
