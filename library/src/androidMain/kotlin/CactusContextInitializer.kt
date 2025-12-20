@@ -2,11 +2,9 @@ package com.cactus
 
 import android.content.Context
 import android.util.Log
-import com.cactus.services.CactusConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 object CactusContextInitializer {
     private var applicationContext: Context? = null
