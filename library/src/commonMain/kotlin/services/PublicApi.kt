@@ -15,7 +15,7 @@ object CactusConfig {
     }
 
     internal suspend fun init() {
-        if(!Telemetry.isInitialized) {
+        if(!Telemetry.isInitialized && isTelemetryEnabled) {
             val projectId = CactusId.getProjectId()
             val deviceId = Telemetry.fetchDeviceId()
             Telemetry.init(projectId, deviceId)
