@@ -48,11 +48,8 @@ data class ExampleItem(
 @Composable
 fun App() {
     var currentPage by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
-
-    // Set telemetry token
     LaunchedEffect(Unit) {
         CactusConfig.setTelemetryToken("a83c7f7a-43ad-4823-b012-cbeb587ae788")
-        CactusConfig.setProKey("f9510cdc-38ff-421e-ab8f-f2e6fc2cb8c5")
     }
 
     val examples = listOf(
