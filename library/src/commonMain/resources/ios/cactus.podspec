@@ -8,6 +8,6 @@ Pod::Spec.new do |spec|
   spec.author        = { "Cactus" => "contact@cactus.ai" }
   spec.ios.deployment_target = "13.0"
   spec.swift_version = "5.0"
-  spec.frameworks = "Accelerate", "Foundation", "Metal", "MetalKit"
+  spec.frameworks = "Accelerate", "Foundation", "Metal", "MetalKit", "CoreML"
   spec.source = { :path => "." }
  end
