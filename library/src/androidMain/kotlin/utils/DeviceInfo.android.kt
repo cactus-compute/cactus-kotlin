@@ -8,7 +8,7 @@ import utils.CactusLogger
 
 // External JNI functions that will be loaded from the cactus_util library
 external fun nativeRegisterApp(encryptedPayload: String): String?
-external fun nativeGetDeviceId(): String?
+external fun nativeGetDeviceId(proToken: String?): String?
 external fun nativeSetAndroidDataDirectory(dataDirectory: String)
 
 actual suspend fun getDeviceMetadata(): Map<String, Any> {
@@ -33,14 +33,14 @@ actual suspend fun getDeviceMetadata(): Map<String, Any> {
     }
 }
 
-actual suspend fun getDeviceId(cactusToken: String?): String? {
+actual suspend fun getDeviceId(cactusProKey: String?): String? {
     return try {
         // Initialize data directory if not already done
         val context = CactusContextInitializer.getApplicationContext()
         nativeSetAndroidDataDirectory(context.filesDir.absolutePath)
 
         // Get device ID from your native library
-        nativeGetDeviceId()
+        nativeGetDeviceId(cactusProKey)
     } catch (e: Exception) {
         CactusLogger.e("Error getting device ID from native library: ${e.message}", tag = "DeviceInfo", throwable = e)
         null
