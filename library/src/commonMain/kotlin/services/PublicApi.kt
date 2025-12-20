@@ -4,10 +4,16 @@ import com.cactus.CactusModel
 
 object CactusConfig {
     var isTelemetryEnabled: Boolean = true
+    var cactusProKey: String? = null
 
     fun setTelemetryToken(token: String) {
         Telemetry.instance?.setCactusToken(token)
     }
+
+    fun setProKey(proKey: String) {
+        cactusProKey = proKey
+    }
+
     internal suspend fun init() {
         val projectId = CactusId.getProjectId()
         val deviceId = Telemetry.fetchDeviceId()
