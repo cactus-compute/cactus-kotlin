@@ -36,9 +36,9 @@ actual suspend fun getDeviceMetadata(): Map<String, Any> {
 }
 
 @OptIn(ExperimentalForeignApi::class)
-actual suspend fun getDeviceId(): String? {
+actual suspend fun getDeviceId(cactusToken: String?): String? {
     return try {
-        val deviceIdPtr = get_device_id()
+        val deviceIdPtr = get_device_id(cactusToken)
         val deviceId = deviceIdPtr?.toKString()
 
         deviceId

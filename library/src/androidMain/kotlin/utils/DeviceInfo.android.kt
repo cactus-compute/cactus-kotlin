@@ -33,7 +33,7 @@ actual suspend fun getDeviceMetadata(): Map<String, Any> {
     }
 }
 
-actual suspend fun getDeviceId(): String? {
+actual suspend fun getDeviceId(cactusToken: String?): String? {
     return try {
         // Initialize data directory if not already done
         val context = CactusContextInitializer.getApplicationContext()
