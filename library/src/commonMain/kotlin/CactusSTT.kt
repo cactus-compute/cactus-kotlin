@@ -1,5 +1,6 @@
 package com.cactus
 
+import com.cactus.services.CactusConfig
 import com.cactus.services.Supabase
 import com.cactus.services.Telemetry
 import utils.CactusLogger
@@ -12,10 +13,6 @@ class CactusSTT() {
     private val wisprFlow = WisprFlow()
 
     private var voiceModels = listOf<VoiceModel>()
-
-    init {
-        ensureCactusInitialized()
-    }
 
     suspend fun downloadModel(
         model: String = _lastInitializedModel
@@ -38,6 +35,7 @@ class CactusSTT() {
     }
 
     suspend fun initializeModel(params: CactusInitParams) {
+        CactusConfig.init()
         val modelFolder = params.model ?: _lastInitializedModel
         val modelPath = getModelPath(modelFolder)
 

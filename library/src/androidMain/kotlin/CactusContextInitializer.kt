@@ -32,9 +32,6 @@ object CactusContextInitializer {
         } else {
             Log.d("CactusInit", "Cactus already initialized")
         }
-        scope.launch {
-            CactusConfig.init()
-        }
     }
     
     fun getApplicationContext(): Context {

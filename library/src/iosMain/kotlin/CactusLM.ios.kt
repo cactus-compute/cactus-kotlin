@@ -8,7 +8,3 @@ actual fun getModelPath(modelFolder: String): String {
     val modelsDir = IOSFileUtils.getModelsDirectory() ?: ""
     return "$modelsDir/$modelFolder"
 }
-
-actual fun ensureCactusInitialized() {
-    CactusInitializer.ensureInitialized()
-}

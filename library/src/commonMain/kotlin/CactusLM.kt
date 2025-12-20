@@ -2,6 +2,7 @@ package com.cactus
 
 import com.cactus.models.CactusTool
 import com.cactus.models.toToolsJson
+import com.cactus.services.CactusConfig
 import com.cactus.services.Supabase
 import com.cactus.services.Telemetry
 import com.cactus.services.ToolFilterConfig
@@ -20,10 +21,6 @@ class CactusLM(
 
     private val _models = mutableListOf<CactusModel>()
     private var _toolFilterService: ToolFilterService? = null
-
-    init {
-        ensureCactusInitialized()
-    }
 
     suspend fun downloadModel(
         model: String = _lastInitializedModel
@@ -46,6 +43,7 @@ class CactusLM(
     }
 
     suspend fun initializeModel(params: CactusInitParams) {
+        CactusConfig.init()
         val modelFolder = params.model ?: _lastInitializedModel
         val modelPath = getModelPath(modelFolder)
 
@@ -256,4 +254,3 @@ class CactusLM(
 }
 
 expect fun getModelPath(modelFolder: String): String
-expect fun ensureCactusInitialized()
