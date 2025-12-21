@@ -67,6 +67,15 @@ CactusTelemetry.isTelemetryEnabled = false
 CactusTelemetry.setTelemetryToken("your_token_here")
 ```
 
+### NPU Acceleration (Optional)
+To enable NPU acceleration (requires a Pro key):
+```kotlin
+import com.cactus.CactusConfig
+
+// Enable NPU acceleration with your Pro key
+CactusConfig.setProKey("your-pro-key-here") // contact founders@cactuscompute.com to get your token!
+```
+
 ## Language Model (LLM)
 
 The `CactusLM` class provides text completion capabilities with high-performance local inference.
@@ -267,7 +276,7 @@ val result = lm.generateCompletion(
 
 #### Data Classes
 - `CactusInitParams(model: String? = null, contextSize: Int? = null)` - Parameters for model initialization.
-- `CactusCompletionParams(model: String? = null, temperature: Double? = null, topK: Int? = null, topP: Double? = null, maxTokens: Int = 200, stopSequences: List<String> = listOf("<|im_end|>", "<end_of_turn>"), tools: List<CactusTool> = emptyList(), mode: InferenceMode = InferenceMode.LOCAL, cactusToken: String? = null)` - Parameters for text completion.
+- `CactusCompletionParams(model: String? = null, temperature: Double? = null, topK: Int? = null, topP: Double? = null, maxTokens: Int = 200, stopSequences: List<String> = listOf("<|im_end|>", "<end_of_turn>"), tools: List<CactusTool> = emptyList(), forceTools: Boolean? = null, mode: InferenceMode = InferenceMode.LOCAL, cactusToken: String? = null)` - Parameters for text completion. Set `forceTools` to true to force the model to call one of the provided tools.
 - `CactusCompletionResult(success: Boolean, response: String? = null, timeToFirstTokenMs: Double? = null, totalTimeMs: Double? = null, tokensPerSecond: Double? = null, prefillTokens: Int? = null, decodeTokens: Int? = null, totalTokens: Int? = null, toolCalls: List<ToolCall>? = emptyList())` - The result of a text completion.
 - `CactusEmbeddingResult(success: Boolean, embeddings: List<Double> = listOf(), dimension: Int? = null, errorMessage: String? = null)` - The result of embedding generation.
 - `ChatMessage(content: String, role: String, timestamp: Long? = null, images: List<String>)` - A chat message with role (e.g., "user", "assistant").
