@@ -75,9 +75,11 @@ object IOSFileUtils {
             paths.forEach { zipEntryPath ->
                 zipFileSystem.source(zipEntryPath).buffer().use { source ->
                     val fullPath = zipEntryPath.toString().trimStart('/')
-
-                    // Strip the first directory level if it exists (removes the top-level folder from zip)
-                    val relativeFilePath = if (fullPath.contains('/')) {
+                    
+                    // Preserve .mlpackage directory structure, otherwise strip first directory level
+                    val relativeFilePath = if (fullPath.contains(".mlpackage/") || fullPath.endsWith(".mlpackage")) {
+                        fullPath
+                    } else if (fullPath.contains('/')) {
                         fullPath.substringAfter('/')
                     } else {
                         fullPath

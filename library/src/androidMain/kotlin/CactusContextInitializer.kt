@@ -2,11 +2,9 @@ package com.cactus
 
 import android.content.Context
 import android.util.Log
-import com.cactus.services.CactusTelemetry
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 object CactusContextInitializer {
     private var applicationContext: Context? = null
@@ -31,9 +29,6 @@ object CactusContextInitializer {
             Log.d("CactusInit", "Cactus initialization complete")
         } else {
             Log.d("CactusInit", "Cactus already initialized")
-        }
-        scope.launch {
-            CactusTelemetry.init()
         }
     }
     

@@ -51,6 +51,9 @@ internal object CactusPayloadBuilder {
             params.topP?.let {
                 append("\"top_p\":${params.topP},")
             }
+            params.forceTools?.let {
+                append("\"force_tools\":${params.forceTools},")
+            }
             append("\"max_tokens\":${params.maxTokens}")
             if (params.stopSequences.isNotEmpty()) {
                 append(

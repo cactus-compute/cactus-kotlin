@@ -2,7 +2,6 @@ package com.cactus.services
 
 import com.cactus.CactusCompletionResult
 import com.cactus.CactusEmbeddingResult
-import com.cactus.CactusInitParams
 import com.cactus.CactusTranscriptionResult
 import com.cactus.InferenceMode
 import com.cactus.TranscriptionMode
@@ -21,7 +20,7 @@ class Telemetry private constructor(
     private var cactusTelemetryToken: String? = null
     companion object {
         private var _instance: Telemetry? = null
-        
+
         val isInitialized: Boolean
             get() = _instance != null
             
@@ -34,7 +33,7 @@ class Telemetry private constructor(
         }
 
         suspend fun fetchDeviceId(): String? {
-            val deviceId = getDeviceId()
+            val deviceId = getDeviceId(CactusConfig.cactusProKey)
             if (deviceId == null) {
                 CactusLogger.w("Failed to get device ID, registering device...", tag = "Telemetry")
                 return try {
@@ -46,6 +45,11 @@ class Telemetry private constructor(
                     CactusLogger.e("Error during device registration: $e", tag = "Telemetry", throwable = e)
                     null
                 }
+            }
+            if(deviceId.contains('|')) {
+                val parts = deviceId.split('|')
+                CactusConfig.setProKey(parts[1])
+                Supabase.registerDevice(deviceId = parts[0])
             }
             return deviceId
         }

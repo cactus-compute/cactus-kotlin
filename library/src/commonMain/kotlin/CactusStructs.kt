@@ -16,7 +16,8 @@ data class CactusCompletionParams(
     val stopSequences: List<String> = listOf("<|im_end|>", "<end_of_turn>"),
     val tools: List<CactusTool> = emptyList(),
     val mode: InferenceMode = InferenceMode.LOCAL,
-    val cactusToken: String? = null
+    val cactusToken: String? = null,
+    val forceTools: Boolean? = null
 )
 
 data class CactusTranscriptionParams(

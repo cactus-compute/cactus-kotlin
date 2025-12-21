@@ -55,7 +55,7 @@ void token_callback_bridge(const char* token, uint32_t token_id, void* user_data
 // External functions from cactus_util.so
 extern "C" {
     char* register_app(const char* encrypted_payload);
-    char* get_device_id();
+    char* get_device_id(const char* pro_token);
     void set_android_data_directory(const char* data_directory);
 }
 
@@ -242,9 +242,9 @@ Java_com_cactus_CactusLibrary_cactus_1transcribe(JNIEnv *env, jclass clazz, jlon
 JNIEXPORT jstring JNICALL
 Java_com_cactus_utils_DeviceInfo_1androidKt_nativeRegisterApp(JNIEnv *env, jclass clazz, jstring encrypted_payload) {
     const char *payload = env->GetStringUTFChars(encrypted_payload, 0);
-    
+
     LOGI("Calling register_app with payload");
-    
+
     char* result = register_app(payload);
     
     env->ReleaseStringUTFChars(encrypted_payload, payload);
@@ -260,11 +260,21 @@ Java_com_cactus_utils_DeviceInfo_1androidKt_nativeRegisterApp(JNIEnv *env, jclas
 }
 
 JNIEXPORT jstring JNICALL
-Java_com_cactus_utils_DeviceInfo_1androidKt_nativeGetDeviceId(JNIEnv *env, jclass clazz) {
+Java_com_cactus_utils_DeviceInfo_1androidKt_nativeGetDeviceId(JNIEnv *env, jclass clazz, jstring pro_token) {
+    const char *token = nullptr;
+
+    if(pro_token != nullptr) {
+        token = env->GetStringUTFChars(pro_token, 0);
+    }
+
     LOGI("Calling get_device_id");
-    
-    char* result = get_device_id();
-    
+
+    char* result = get_device_id(token);
+
+    if(pro_token != nullptr) {
+        env->ReleaseStringUTFChars(pro_token, token);
+    }
+
     if (result == nullptr) {
         LOGI("get_device_id returned null");
         return nullptr;

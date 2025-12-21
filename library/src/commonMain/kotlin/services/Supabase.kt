@@ -19,7 +19,9 @@ import utils.CactusLogger
  */
 @Serializable
 internal data class DeviceRegistrationRequest(
-    val device_data: Map<String, String>
+    val device_data: Map<String, String>? = null,
+    val device_id: String? = null,
+    val cactus_pro_key: String?
 )
 /**
  * Supabase service for API communication
@@ -39,7 +41,7 @@ object Supabase {
     }
 
     suspend fun sendLogRecord(record: LogRecord): Boolean {
-        if (!CactusTelemetry.isTelemetryEnabled) {
+        if (!CactusConfig.isTelemetryEnabled) {
             CactusLogger.d("Telemetry is disabled, skipping log record", tag = "Supabase")
             return true
         }
@@ -107,16 +109,33 @@ object Supabase {
         }
     }
 
-    suspend fun registerDevice(deviceData: Map<String, String>): String? {
-        if (!CactusTelemetry.isTelemetryEnabled) {
+    suspend fun registerDevice(
+        deviceData: Map<String, String>? = null,
+        deviceId: String? = null
+    ): String? {
+        if (!CactusConfig.isTelemetryEnabled) {
             CactusLogger.d("Telemetry is disabled, returning telemetry-disabled device ID", tag = "Supabase")
             return com.cactus.utils.registerApp("telemetry-disabled")
+        }
+
+        if(deviceData == null && deviceId == null) {
+            return null
         }
 
         return try {
             val response = client.post("$SUPABASE_URL/functions/v1/device-registration") {
                 header("Content-Type", "application/json")
-                setBody(DeviceRegistrationRequest(device_data = deviceData))
+                if(deviceData == null) {
+                    setBody(DeviceRegistrationRequest(
+                        device_id = deviceId,
+                        cactus_pro_key = CactusConfig.cactusProKey
+                    ))
+                } else {
+                    setBody(DeviceRegistrationRequest(
+                        device_data = deviceData,
+                        cactus_pro_key = CactusConfig.cactusProKey
+                    ))
+                }
             }
 
             if (response.status == HttpStatusCode.OK) {
