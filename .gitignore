@@ -15,4 +15,4 @@ library/libs/ios/cactus.xcframework
 library/libs/android/jniLibs
 library/src/commonMain/resources/ios/cactus.xcframework
 library/src/commonMain/resources/android/jniLibs
-gradle.properties
+**gradle.properties
