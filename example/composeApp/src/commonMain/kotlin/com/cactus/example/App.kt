@@ -34,6 +34,7 @@ import com.cactus.example.pages.EmbeddingPage
 import com.cactus.example.pages.FetchModelsPage
 import com.cactus.example.pages.FunctionCallingPage
 import com.cactus.example.pages.HybridCompletionPage
+import com.cactus.example.pages.ModelManagerPage
 import com.cactus.example.pages.StreamingCompletionPage
 import com.cactus.example.pages.TranscriptionPage
 import com.cactus.example.pages.VisionPage
@@ -77,6 +78,10 @@ fun App() {
             title = "Fetch Models",
             description = "Model discovery and management"
         ) { FetchModelsPage { currentPage = null } },
+        ExampleItem(
+            title = "Model Manager",
+            description = "List and delete downloaded models"
+        ) { ModelManagerPage { currentPage = null } },
         ExampleItem(
             title = "Embedding",
             description = "Text embedding generation"
