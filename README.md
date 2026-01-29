@@ -24,7 +24,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
-                implementation("com.cactuscompute:cactus:1.3.0-beta")
+                implementation("com.cactuscompute:cactus:1.4.1-beta")
             }
         }
     }
@@ -160,10 +160,10 @@ runBlocking {
 ```kotlin
 runBlocking {
     val lm = CactusLM()
-    
+
     // Get list of available models
     val models = lm.getModels()
-    
+
     models.forEach { model ->
         println("Model: ${model.name}")
         println("  Slug: ${model.slug}")
@@ -174,6 +174,70 @@ runBlocking {
     }
 }
 ```
+
+### Model Management
+
+The `CactusModelManager` singleton provides utilities to manage downloaded models without requiring a `CactusLM` or `CactusSTT` instance. This is useful for:
+- Viewing all locally downloaded models
+- Checking if a specific model exists before initialization
+- Deleting models to free up storage space
+- Inspecting the models directory location
+
+#### Basic Usage
+```kotlin
+import com.cactus.CactusModelManager
+
+// Get a list of all downloaded model slugs
+val downloadedModels = CactusModelManager.getDownloadedModels()
+println("Downloaded models: $downloadedModels")
+// Output: ["qwen3-0.6", "whisper-tiny"]
+
+// Check if a specific model is downloaded
+val isDownloaded = CactusModelManager.isModelDownloaded("qwen3-0.6")
+println("qwen3-0.6 is downloaded: $isDownloaded")
+
+// Delete a model to free storage
+val deleted = CactusModelManager.deleteModel("old-model-slug")
+if (deleted) {
+    println("Model deleted successfully")
+} else {
+    println("Model not found")
+}
+
+// Get the models directory path for debugging
+val modelsPath = CactusModelManager.getModelsDirectory()
+println("Models stored at: $modelsPath")
+// Android: /data/data/your.app.package/files/models
+// iOS: /var/mobile/Containers/Data/Application/.../Documents/models
+```
+
+#### Managing Storage
+```kotlin
+// List all downloaded models and delete unused ones
+val models = CactusModelManager.getDownloadedModels()
+
+models.forEach { modelSlug ->
+    println("Found model: $modelSlug")
+
+    // Delete if needed
+    if (modelSlug == "old-model") {
+        CactusModelManager.deleteModel(modelSlug)
+        println("Deleted $modelSlug")
+    }
+}
+
+// Verify deletion
+val updatedModels = CactusModelManager.getDownloadedModels()
+println("Remaining models: $updatedModels")
+```
+
+#### Model Manager API Reference
+- `fun getDownloadedModels(): List<String>` - Returns a list of model slugs that are currently downloaded on disk. Works for both LLM and STT models.
+- `fun isModelDownloaded(modelSlug: String): Boolean` - Checks if a specific model exists in local storage.
+- `fun deleteModel(modelSlug: String): Boolean` - Deletes a model from local storage. Returns `true` if the model was deleted, `false` if it didn't exist.
+- `fun getModelsDirectory(): String` - Returns the absolute path to the models storage directory.
+
+**Note:** The `CactusModelManager` operates on the file system directly and does not require any model to be initialized. It works independently of `CactusLM` and `CactusSTT` instances.
 
 ### Function Calling (Experimental)
 ```kotlin
