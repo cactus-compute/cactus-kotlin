@@ -66,7 +66,7 @@ class CactusSTT() {
         params: CactusTranscriptionParams = CactusTranscriptionParams(),
         onToken: CactusStreamingCallback? = null,
         mode: TranscriptionMode = TranscriptionMode.LOCAL,
-        apiKey: String? = null,
+        wisprConfig: WisprFlowConfig? = null,
         audioBuffer: ByteArray? = null
     ): CactusTranscriptionResult? {
         val startTime = timeSource.markNow()
@@ -108,8 +108,8 @@ class CactusSTT() {
         }
 
         val remoteTranscribe = suspend {
-            if (apiKey != null) {
-                val wisprResult = wisprFlow.transcribe(filePath!!, apiKey)
+            if (wisprConfig != null) {
+                val wisprResult = wisprFlow.transcribe(filePath!!, wisprConfig)
                 wisprResult?.let {
                     CactusTranscriptionResult(
                         it.success,
