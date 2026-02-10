@@ -57,7 +57,7 @@ private data class AppInfo(
 
 @Serializable
 private data class WisprFlowResponse(
-    val text: String,
+    val text: String?,
     val total_time: Double
 )
 

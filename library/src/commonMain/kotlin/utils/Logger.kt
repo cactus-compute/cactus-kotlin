@@ -1,5 +1,6 @@
 package utils
 
+import co.touchlab.kermit.LogWriter
 import co.touchlab.kermit.Logger
 import co.touchlab.kermit.Severity
 import co.touchlab.kermit.StaticConfig
@@ -10,13 +11,23 @@ import co.touchlab.kermit.platformLogWriter
  * Wraps Kermit logger to provide consistent logging across all platforms.
  */
 object CactusLogger {
-    private val logger = Logger(
-        config = StaticConfig(
-            minSeverity = Severity.Verbose,
-            logWriterList = listOf(platformLogWriter())
-        ),
-        tag = "Cactus"
-    )
+    private var logger = makeLogger(listOf(platformLogWriter()))
+    private fun makeLogger(logWriters: List<LogWriter>) =
+        Logger(
+            config = StaticConfig(
+                minSeverity = Severity.Verbose,
+                logWriterList = logWriters
+            ),
+            tag = "Cactus"
+        )
+
+    /**
+     * Not thread safe, call only during app initialization.
+     * Overrides the default logger with the provided [logWriter].
+     */
+    fun setLogWriter(logWriter: LogWriter) {
+        logger = makeLogger(listOf(logWriter))
+    }
 
     fun v(message: String, tag: String = "Cactus", throwable: Throwable? = null) {
         logger.v(throwable = throwable, tag = tag) { message }
